@@ -237,6 +237,8 @@
     return e;
   }
   const $ = (s, r = document) => r.querySelector(s);
+  // Null-safe listener: a missing element never stops the rest of the app from working.
+  const on = (sel, ev, fn) => { const n = $(sel); if (n) n.addEventListener(ev, fn); };
   const uid = () => 'c_' + Math.random().toString(36).slice(2, 9);
   function unitLabel(unit, v) {
     if (unit === 'h') return `${fmt(v)} h`;
@@ -1255,39 +1257,39 @@
     setView(state.view);
 
     document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
-    $('#go-schedule').addEventListener('click', () => { setView('grid'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    $('#mode-seg').addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
-    $('#copy-now').addEventListener('click', () => applyPreset('copy'));
-    $('#presets').addEventListener('click', (e) => { const b = e.target.closest('[data-preset]'); if (b) applyPreset(b.dataset.preset); });
-    $('#people').addEventListener('click', (e) => {
+    on('#go-schedule', 'click', () => { setView('grid'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    on('#mode-seg', 'click', (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
+    on('#copy-now', 'click', () => applyPreset('copy'));
+    on('#presets', 'click', (e) => { const b = e.target.closest('[data-preset]'); if (b) applyPreset(b.dataset.preset); });
+    on('#people', 'click', (e) => {
       const b = e.target.closest('.person');
       if (!b) return;
       state.cmpId = b.dataset.id;
       renderCompare();
       save();
     });
-    $('#vs-mode').addEventListener('click', (e) => {
+    on('#vs-mode', 'click', (e) => {
       const b = e.target.closest('[data-mode]');
       if (!b) return;
       state.cmpMode = b.dataset.mode;
       renderCompare();
       save();
     });
-    $('#lb-tabs').addEventListener('click', (e) => {
+    on('#lb-tabs', 'click', (e) => {
       const b = e.target.closest('[data-metric]');
       if (!b) return;
       state.lbMetric = b.dataset.metric;
       renderLeaderboard();
       save();
     });
-    $('#pill').addEventListener('click', () => $('#ring').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    on('#pill', 'click', () => $('#ring').scrollIntoView({ behavior: 'smooth', block: 'center' }));
 
     // Show the floating pill once the big ring scrolls away.
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(([e]) => document.body.classList.toggle('ring-away', !e.isIntersecting), { threshold: 0.15 }).observe($('#ring'));
     }
 
-    $('#btn-theme').addEventListener('click', () => {
+    on('#btn-theme', 'click', () => {
       state.theme = effectiveTheme() === 'dark' ? 'light' : 'dark';
       applyTheme();
       save();
@@ -1317,7 +1319,7 @@
       if (act === 'import') $('#file-import').click();
       closeMenu();
     });
-    $('#file-import').addEventListener('change', (e) => {
+    on('#file-import', 'change', (e) => {
       const f = e.target.files[0];
       if (f) importJSON(f);
       e.target.value = '';
@@ -1325,7 +1327,7 @@
 
     // reset
     const dlgReset = $('#dlg-reset');
-    $('#btn-reset').addEventListener('click', () => dlgReset.showModal());
+    on('#btn-reset', 'click', () => dlgReset.showModal());
     dlgReset.addEventListener('close', () => {
       const mode = dlgReset.returnValue;
       if (mode !== 'blank' && mode !== 'example') return;
@@ -1345,11 +1347,11 @@
     });
 
     // categories
-    $('#btn-categories').addEventListener('click', openCategories);
-    $('#btn-add-cat').addEventListener('click', () => addCategory());
+    on('#btn-categories', 'click', openCategories);
+    on('#btn-add-cat', 'click', () => addCategory());
 
     // schedule
-    $('#btn-clear-grid').addEventListener('click', () => {
+    on('#btn-clear-grid', 'click', () => {
       if (!state.grid.some(Boolean)) return;
       const snap = state.grid.slice();
       state.grid = Array(HOURS).fill(null);
@@ -1358,14 +1360,14 @@
       save();
       toast('Schedule cleared', 'Undo', () => { state.grid = snap; paintCells(); renderTally(); save(); });
     });
-    $('#btn-autofill').addEventListener('click', () => {
+    on('#btn-autofill', 'click', () => {
       const snap = state.grid.slice();
       autoFill(state.target);
       toast(`Filled from ${state.target === 'ideal' ? 'your ideal week' : 'your week now'}. Paint to fine-tune.`, 'Undo', () => {
         state.grid = snap; paintCells(); renderTally(); save();
       });
     });
-    $('#target-seg').addEventListener('click', (e) => {
+    on('#target-seg', 'click', (e) => {
       const t = e.target.closest('[data-target]');
       if (!t) return;
       state.target = t.dataset.target;
@@ -1388,7 +1390,25 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  function boot() {
+    try {
+      init();
+    } catch (err) {
+      console.error(err);
+      showReloadBar();
+    }
+  }
+  // If the page and script ever get out of sync (e.g. a stale cached file), offer a clean reload.
+  function showReloadBar() {
+    if (document.getElementById('reload-bar')) return;
+    const bar = el('div', { id: 'reload-bar', class: 'reload-bar', role: 'alert' },
+      '<span>Something didn’t load properly.</span><button type="button">Reload</button>');
+    bar.querySelector('button').addEventListener('click', () => location.reload());
+    document.body.append(bar);
+  }
+  window.addEventListener('error', () => { if (!document.querySelector('.story')) showReloadBar(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 
   // Expose the calculation for tests / curious users.
   window.Planner168 = { SECTIONS, EXAMPLE, PRESETS, computeWeek: () => R };

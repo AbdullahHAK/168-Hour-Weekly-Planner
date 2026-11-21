@@ -628,3 +628,65 @@ kbd { font: 500 11px var(--font); border: 1px solid var(--border-strong); border
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Responsive fixes ---------- */
+html, body { overflow-x: clip; }
+img, svg { max-width: 100%; }
+
+/* Top bar: icon-only actions before they can crowd the tabs */
+@media (max-width: 1100px) {
+  .actions .lbl { display: none; }
+  .actions .btn.ghost { padding: 8px; }
+}
+@media (max-width: 860px) {
+  .tab .step { display: none; }
+  .tab { padding: 6px 12px; }
+  .topbar-inner { gap: 12px; }
+}
+
+/* People row: wraps on wide screens, swipes on phones */
+.people { flex-wrap: wrap; overflow-x: visible; }
+@media (max-width: 760px) {
+  .people {
+    flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x mandatory;
+    margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px;
+    -webkit-mask: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+    mask: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+  }
+  .person { scroll-snap-align: start; width: 74px; }
+  .person .av { width: 54px; height: 54px; font-size: 16px; }
+}
+
+/* Small phones */
+@media (max-width: 400px) {
+  .vs-card { padding: 20px 10px 16px; }
+  .vs-top { gap: 4px; }
+  .vs-ring { width: 104px; }
+  .vs-center b { font-size: 19px; }
+  .vs-center span { font-size: 10.5px; }
+  .vs-badge { width: 28px; height: 28px; font-size: 10px; }
+  .vs-role { font-size: 12px; }
+  .fly-row { grid-template-columns: 1fr 74px 1fr; gap: 4px; }
+  .fly-label { font-size: 11px; }
+  .fly-bar .v { min-width: 24px; font-size: 11.5px; }
+  .facts li { padding: 10px 12px; font-size: 13.5px; }
+  .lb-head h2 { font-size: 19px; }
+  .lb-tabs button { padding: 5px 9px; font-size: 12.5px; }
+  .lb-you { gap: 10px; padding: 12px; }
+  .lb-rank { font-size: 22px; min-width: 38px; }
+  .mode button { font-size: 13px; gap: 6px; padding: 10px 6px; }
+  .presets button { padding: 5px 10px; }
+  .ring-num { font-size: 46px; }
+  .num { padding: 1px 7px; font-size: 14.5px; }
+  .story-text { font-size: 14.5px; }
+  .receipt { padding-left: 16px; padding-right: 16px; }
+  .brand-text span { display: none; }
+}
+
+/* Reload bar (shown only if the app fails to start) */
+.reload-bar {
+  position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px;
+  background: var(--primary); color: var(--primary-text); border-radius: 12px; box-shadow: var(--shadow-pop); font-size: 14px;
+}
+.reload-bar button { border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; background: var(--ide); color: #fff; }
