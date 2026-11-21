@@ -602,7 +602,9 @@
       down = false;
       b.classList.remove('scrubbing');
       document.body.classList.remove('is-scrubbing');
-      if (!moved) openPop(b, def);
+      // A tap opens the editor from the 'click' that follows (see below), so the
+      // phone's follow-up click can't land on the editor's backdrop and close it.
+      if (moved) suppressClick = Date.now();
     };
     b.addEventListener('pointerup', end);
     b.addEventListener('pointercancel', () => { down = false; b.classList.remove('scrubbing'); document.body.classList.remove('is-scrubbing'); });
@@ -615,7 +617,12 @@
         recalc();
       }
     });
-    b.addEventListener('click', (e) => { if (e.detail === 0) openPop(b, def); }); // keyboard Enter/Space
+    let suppressClick = 0;
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (Date.now() - suppressClick < 500) return; // that was a drag, not a tap
+      openPop(b, def); // taps, mouse clicks and keyboard Enter/Space
+    });
     return b;
   }
 
@@ -650,7 +657,9 @@
 
   /* ---------- Popover editor ---------- */
   let popFor = null;
+  let popOpenedAt = 0;
   function openPop(node, def) {
+    popOpenedAt = Date.now();
     const pop = $('#pop');
     popFor = { node, def };
     const v = getVal(def);
@@ -2021,7 +2030,8 @@
       window.visualViewport.addEventListener('resize', liftSheet);
       window.visualViewport.addEventListener('scroll', liftSheet);
     }
-    on('#pop-backdrop', 'click', () => closePop());
+    // Ignore stray clicks right after the sheet opens (belt and braces for mobile).
+    on('#pop-backdrop', 'click', () => { if (Date.now() - popOpenedAt > 400) closePop(); });
 
     // export menu
     const menuBtn = $('#btn-export');
