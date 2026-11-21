@@ -279,6 +279,7 @@
       cmpMode: 'current',
       lbMetric: 'balance',
       profile: { name: '', photo: '' },
+      hidden: [],
       salah: { place: 'makkah', lat: 21.4225, lng: 39.8262, zone: 'Asia/Riyadh', method: 'Makkah', asr: 'standard', sync: false, markers: false,
         current: { prayers: 5, prayerMins: 10, quranMins: 5, dhikrMins: 5, jumuahMins: 60, learnHours: 0, tahajjudNights: 0, tahajjudMins: 0 },
         ideal: { prayers: 5, prayerMins: 15, quranMins: 20, dhikrMins: 10, jumuahMins: 90, learnHours: 2, tahajjudNights: 2, tahajjudMins: 20 } },
@@ -293,6 +294,7 @@
     if (raw.mode === 'current' || raw.mode === 'ideal') s.mode = raw.mode;
     if (raw.target === 'current' || raw.target === 'ideal') s.target = raw.target;
     if (raw.view === 'compare' || raw.view === 'salah') s.view = raw.view;
+    if (Array.isArray(raw.hidden)) s.hidden = raw.hidden.filter((id) => BUILTIN_IDS.includes(id));
     if (raw.profile && typeof raw.profile === 'object') {
       if (typeof raw.profile.name === 'string') s.profile.name = raw.profile.name.replace(/[\u0000-\u001f]/g, '').slice(0, 40);
       const ph = raw.profile.photo;
@@ -370,6 +372,8 @@
 
   const cat = (id) => state.cats.find((c) => c.id === id);
   const customs = () => state.cats.filter((c) => !c.builtin);
+  const isHidden = (id) => (state.hidden || []).includes(id);
+  const shown = () => state.cats.filter((c) => !isHidden(c.id)); // areas the user hasn't removed
 
   /* ---------- Calculation (the spreadsheet engine) ---------- */
   function computeWeek(w) {
@@ -377,7 +381,7 @@
     const areas = {};
     let running = HOURS;
     for (const id of BUILTIN_IDS) {
-      const r = SECTIONS[id].calc(v);
+      const r = isHidden(id) ? { lines: [], total: 0 } : SECTIONS[id].calc(v);
       running -= r.total;
       areas[id] = { ...r, left: running };
     }
@@ -488,6 +492,7 @@
     root.innerHTML = '';
     chips.length = 0;
     for (const id of BUILTIN_IDS) {
+      if (isHidden(id)) continue;
       const c = cat(id);
       const sec = SECTIONS[id];
       const card = el('article', { class: 'story', style: `--c:${c.color}`, 'data-id': id });
@@ -496,6 +501,7 @@
           <span class="story-icon">${icon(sec.icon)}</span>
           <h3>${esc(c.name)}</h3>
           <div class="story-total"><span class="t-num" data-total="${id}"></span><span class="t-delta" data-delta="${id}"></span></div>
+          <button class="story-del" type="button" data-del="${id}" aria-label="Remove ${esc(c.name)}" title="Remove"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
         </header>`;
       const p = el('p', { class: 'story-text' });
       const parts = sec.story.split(/(\{\w+\})/);
@@ -515,6 +521,7 @@
           <span class="story-icon">${icon('star')}</span>
           <h3>${esc(c.name)}</h3>
           <div class="story-total"><span class="t-num" data-total="${c.id}"></span><span class="t-delta" data-delta="${c.id}"></span></div>
+          <button class="story-del" type="button" data-del="${c.id}" aria-label="Remove ${esc(c.name)}" title="Remove"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
         </header>`;
       if (c.linked === 'salah') {
         card.querySelector('.story-icon').innerHTML = icon('crescent');
@@ -536,6 +543,11 @@
     const add = el('button', { class: 'story add', type: 'button' }, `<span class="add-plus">+</span><span><b>Add your own area</b><br><span class="muted">Study, side project, faith, volunteering…</span></span>`);
     add.addEventListener('click', () => { addCategory(); openCategories(); });
     root.append(add);
+    if (state.hidden.length) {
+      const row = el('div', { class: 'hidden-areas' }, `<span class="muted">Removed areas</span>` +
+        state.hidden.map((id) => `<button type="button" data-restore="${id}" style="--c:${cat(id).color}"><span class="sw"></span>${esc(cat(id).name)}<b>+</b></button>`).join(''));
+      root.append(row);
+    }
     refreshChips();
   }
 
@@ -699,13 +711,13 @@
     const r = R[w];
     const c = R.current;
     const date = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-    const lines = state.cats.map((k) => {
+    const lines = shown().map((k) => {
       const t = r.areas[k.id].total;
       return `<li class="${t === 0 ? 'z' : ''}"><span class="r-name"><i style="background:${k.color}"></i>${esc(k.name)}</span><span class="r-dots"></span><span class="r-val">${fmt(t)}</span></li>`;
     }).join('');
     const over = round1(r.free) < 0;
     const gain = r.free - c.free;
-    const bars = state.cats.map((k) => {
+    const bars = shown().map((k) => {
       const t = Math.max(0, r.areas[k.id].total);
       return t > 0 ? `<span style="flex:${t};background:${k.color}"></span>` : '';
     }).join('') + (r.free > 0 ? `<span class="free" style="flex:${r.free}"></span>` : '');
@@ -964,7 +976,7 @@
   function renderPalette() {
     const p = $('#palette');
     p.innerHTML = '';
-    state.cats.forEach((c, n) => {
+    shown().forEach((c, n) => {
       const b = el('button', { class: 'chip', type: 'button', role: 'radio', style: `--c:${c.color}`, 'aria-checked': String(state.brush === c.id) },
         `<span class="sw"></span>${esc(c.name)}${n < 9 ? `<span class="k">${n + 1}</span>` : ''}`);
       b.addEventListener('click', () => setBrush(c.id));
@@ -988,7 +1000,7 @@
     $('#alloc').innerHTML = `
       <div class="box"><div class="v">${allocated}<small> / 168</small></div><div class="l">hours placed</div></div>
       <div class="box"><div class="v">${remaining}<small> h</small></div><div class="l">still free</div></div>
-      <div class="meter">${state.cats.map((c) => (counts[c.id] ? `<span style="width:${(counts[c.id] / HOURS) * 100}%;background:${c.color}"></span>` : '')).join('')}</div>`;
+      <div class="meter">${shown().map((c) => (counts[c.id] ? `<span style="width:${(counts[c.id] / HOURS) * 100}%;background:${c.color}"></span>` : '')).join('')}</div>`;
     document.querySelectorAll('#target-seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.target === state.target)));
     $('#autofill-label').textContent = `Auto-fill from ${state.target === 'ideal' ? 'my ideal week' : 'my week now'}`;
     const item = (color, name, have, want) => {
@@ -1003,7 +1015,7 @@
       return `<li style="--c:${color}"><div class="t-top"><span class="sw"></span><span class="n">${name}</span><span class="v">${have}<small> / ${fmt(want)}</small></span></div>
         <div class="t-bar"><span style="width:${pct}%"></span></div><div class="t-note ${cls}">${note}</div></li>`;
     };
-    $('#tally').innerHTML = state.cats.map((c) => item(c.color, esc(c.name), counts[c.id] || 0, T.areas[c.id].total)).join('') +
+    $('#tally').innerHTML = shown().map((c) => item(c.color, esc(c.name), counts[c.id] || 0, T.areas[c.id].total)).join('') +
       item('var(--border-strong)', 'Free time', remaining, Math.max(0, T.free));
   }
 
@@ -1578,6 +1590,38 @@
     else delete document.documentElement.dataset.theme;
   }
 
+
+  /* ---------- Remove / restore areas (with undo) ---------- */
+  function removeArea(id) {
+    const c = cat(id);
+    if (!c) return;
+    const snap = JSON.stringify({ cats: state.cats, hidden: state.hidden, grid: state.grid, sync: state.salah.sync, brush: state.brush });
+    if (c.builtin) {
+      if (!state.hidden.includes(id)) state.hidden.push(id);
+    } else if (c.linked === 'salah') {
+      state.salah.sync = false; // syncFaith() removes the area
+    } else {
+      state.cats = state.cats.filter((x) => x !== c);
+    }
+    state.grid = state.grid.map((g) => (g === id ? null : g));
+    if (state.brush === id) state.brush = (shown()[0] || {}).id || null;
+    closePop();
+    renderAll(false);
+    if ($('#dlg-categories').open) renderCatList();
+    toast(`Removed ${c.name}`, 'Undo', () => {
+      const o = JSON.parse(snap);
+      state.cats = o.cats; state.hidden = o.hidden; state.grid = o.grid; state.salah.sync = o.sync; state.brush = o.brush;
+      renderAll(false);
+      if ($('#dlg-categories').open) renderCatList();
+    });
+  }
+  function restoreArea(id) {
+    state.hidden = state.hidden.filter((x) => x !== id);
+    renderAll(false);
+    if ($('#dlg-categories').open) renderCatList();
+    toast(`${cat(id).name} is back`);
+  }
+
   /* ---------- Categories dialog ---------- */
   function addCategory() {
     const used = new Set(state.cats.map((c) => c.color));
@@ -1596,16 +1640,15 @@
       name.addEventListener('input', () => { c.name = name.value || (c.builtin ? BUILTINS.find((b) => b.id === c.id).name : 'Untitled'); renderAll(false); });
       li.append(col, name);
       if (c.builtin) {
-        li.append(el('span', { class: 'lock', title: 'Built-in areas use the planner formulas and can’t be deleted' }, 'Built-in'));
+        const hid = isHidden(c.id);
+        const tg = el('button', { class: 'btn small ghost vis', type: 'button', title: hid ? 'Show this area again' : 'Remove this area (your numbers are kept)' }, hid ? 'Show' : 'Hide');
+        tg.addEventListener('click', () => (hid ? restoreArea(c.id) : removeArea(c.id)));
+        if (hid) li.classList.add('is-hidden');
+        li.append(tg);
       } else {
         const del = el('button', { class: 'btn icon', type: 'button', 'aria-label': `Delete ${c.name}`, title: 'Delete' },
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg>');
-        del.addEventListener('click', () => {
-          state.cats = state.cats.filter((x) => x !== c);
-          state.grid = state.grid.map((g) => (g === c.id ? null : g));
-          if (state.brush === c.id) state.brush = 'sleep';
-          renderAll();
-        });
+        del.addEventListener('click', () => removeArea(c.id));
         li.append(del);
       }
       ul.append(li);
@@ -1742,6 +1785,12 @@
       renderLeaderboard();
       save();
     });
+    on('#cards', 'click', (e) => {
+      const del = e.target.closest('[data-del]');
+      if (del) { removeArea(del.dataset.del); return; }
+      const rs = e.target.closest('[data-restore]');
+      if (rs) restoreArea(rs.dataset.restore);
+    });
     on('#btn-profile', 'click', openProfile);
     on('#pf-upload', 'click', () => $('#pf-file').click());
     on('#pf-file', 'change', (e) => { processPhoto(e.target.files[0]); e.target.value = ''; });
@@ -1856,7 +1905,7 @@
     document.addEventListener('keydown', (e) => {
       if (state.view !== 'grid' || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.target.closest('input, textarea, dialog')) return;
-      if (/^[1-9]$/.test(e.key)) { const c = state.cats[+e.key - 1]; if (c) setBrush(c.id); }
+      if (/^[1-9]$/.test(e.key)) { const c = shown()[+e.key - 1]; if (c) setBrush(c.id); }
       else if (e.key === 'e' || e.key === 'E' || e.key === '0') setBrush(null);
     });
 

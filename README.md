@@ -24,7 +24,7 @@ Your week is written as short sentences. Each number in them can be changed:
   - a **weekly receipt** listing hours per area, free time, and your free hours per month and year;
   - a short insight, for example *"Your ideal week frees up 24 hours a week — 52 full days a year."*
 
-The 8 life areas are Sleep, Work, Food, Chores, Childcare, Fitness, Entertainment and Relationships. You can add your own with **Categories**.
+The 8 life areas are Sleep, Work, Food, Chores, Childcare, Fitness, Entertainment and Relationships. You can add your own with **Categories**. Hover over a card and tap **×** to remove an area you don't need, then **Undo** or bring it back from *Removed areas*. Built-in areas keep your numbers while removed.
 
 ### 2 · Compare
 

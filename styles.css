@@ -855,3 +855,68 @@ table.pt { width: 100%; border-collapse: collapse; font-size: 13.5px; font-varia
 .pf-field input:focus { border-color: var(--ide); box-shadow: 0 0 0 3px var(--ring); }
 .pf-note { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px !important; margin: 14px 0 0 !important; }
 .pf-note svg { width: 15px; height: 15px; flex: none; margin-top: 2px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+
+/* ==========================================================
+   Remove / restore areas
+   ========================================================== */
+.story-head { position: relative; }
+.story-del {
+  width: 28px; height: 28px; margin-left: 2px; margin-right: -6px; flex: none;
+  display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--faint);
+  cursor: pointer; opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.story-del svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.story:hover .story-del, .story:focus-within .story-del, .story-del:focus-visible { opacity: 1; }
+.story-del:hover { background: var(--surface-2); color: var(--danger); }
+@media (hover: none) { .story-del { opacity: 0.7; } }
+
+.hidden-areas { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; padding: 4px 2px; }
+.hidden-areas .muted { margin-right: 4px; }
+.hidden-areas button {
+  display: inline-flex; align-items: center; gap: 7px; border: 1px dashed var(--border-strong); background: none;
+  border-radius: 999px; padding: 4px 8px 4px 9px; font-size: 13px; color: var(--muted); cursor: pointer;
+}
+.hidden-areas button:hover { color: var(--text); border-style: solid; }
+.hidden-areas .sw { width: 9px; height: 9px; border-radius: 3px; background: var(--c); opacity: 0.6; }
+.hidden-areas b { font-weight: 600; color: var(--faint); }
+.cat-list li.is-hidden input { opacity: 0.45; }
+.cat-list .vis { justify-self: center; }
+
+/* ==========================================================
+   Soft, cloudy colour on cards (both themes; gentler in dark)
+   ========================================================== */
+:root { --tint-chip: 30%; --tint-chip-hover: 46%; --tint-icon: 38%; --tint-haze: 9%; --chip-ink: var(--text); --chip-line: 75%; }
+:root[data-theme="dark"] { --tint-chip: 13%; --tint-chip-hover: 22%; --tint-icon: 15%; --tint-haze: 7%; --chip-line: 35%; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --tint-chip: 13%; --tint-chip-hover: 22%; --tint-icon: 15%; --tint-haze: 7%; --chip-line: 35%; }
+}
+.story {
+  background:
+    radial-gradient(130% 90% at 0% 0%, color-mix(in srgb, var(--c) var(--tint-haze), transparent), transparent 62%),
+    var(--surface);
+}
+.story.add { background: transparent; }
+.num {
+  background: color-mix(in srgb, var(--c) var(--tint-chip), var(--surface));
+  box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--c) var(--chip-line), transparent);
+}
+.num:hover { background: color-mix(in srgb, var(--c) var(--tint-chip-hover), var(--surface)); }
+.num.scrubbing, .num.editing { background: color-mix(in srgb, var(--c) calc(var(--tint-chip-hover) + 12%), var(--surface)); }
+.story-icon {
+  background: color-mix(in srgb, var(--c) var(--tint-icon), var(--surface));
+  color: color-mix(in srgb, var(--c) 30%, var(--text));
+}
+/* Dark: tinted text instead of heavy blocks */
+:root[data-theme="dark"] .num { color: color-mix(in srgb, var(--c) 55%, #fff); }
+:root[data-theme="dark"] .num.zero { color: var(--faint); }
+:root[data-theme="dark"] .story-icon { color: color-mix(in srgb, var(--c) 75%, #fff); }
+:root[data-theme="dark"] .story-bar span { opacity: 0.55; }
+:root[data-theme="dark"] .story:focus-within { border-color: color-mix(in srgb, var(--c) 35%, var(--border)); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .num { color: color-mix(in srgb, var(--c) 55%, #fff); }
+  :root:not([data-theme="light"]) .num.zero { color: var(--faint); }
+  :root:not([data-theme="light"]) .story-icon { color: color-mix(in srgb, var(--c) 75%, #fff); }
+  :root:not([data-theme="light"]) .story-bar span { opacity: 0.55; }
+  :root:not([data-theme="light"]) .story:focus-within { border-color: color-mix(in srgb, var(--c) 35%, var(--border)); }
+}
+.story.faith { background: radial-gradient(140% 80% at 100% 0%, var(--gold-soft), transparent 55%), var(--surface); }
