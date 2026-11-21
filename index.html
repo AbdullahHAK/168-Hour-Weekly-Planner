@@ -63,10 +63,23 @@
   <main>
     <!-- ============ CALCULATOR VIEW ============ -->
     <section id="view-calc" class="view" role="tabpanel" aria-labelledby="tab-calc">
-      <div class="intro">
-        <p class="eyebrow">Every week has exactly 168 hours</p>
-        <h1>How do you spend yours — and how would you <em>like</em> to?</h1>
-        <p class="lede">Answer the questions for your <span class="tag cur">Current week</span> and your <span class="tag ide">Ideal week</span>. Every total updates live, just like a spreadsheet.</p>
+      <div class="hero">
+        <div class="intro">
+          <p class="eyebrow">Every week has exactly 168 hours</p>
+          <h1>How do you spend yours — and how would you <em>like</em> to?</h1>
+          <p class="lede">Answer the questions for your <span class="tag cur">Current week</span> and your <span class="tag ide">Ideal week</span>. Every total updates live as you type.</p>
+        </div>
+        <figure class="card dots-card">
+          <figcaption class="dots-head">
+            <span id="dots-title">Your week in 168 hours</span>
+            <div class="seg" id="dots-seg" role="radiogroup" aria-label="Show week">
+              <button data-week="current" role="radio">Current</button>
+              <button data-week="ideal" role="radio">Ideal</button>
+            </div>
+          </figcaption>
+          <div class="dots" id="dots" role="img"></div>
+          <p class="dots-foot" id="dots-foot"></p>
+        </figure>
       </div>
 
       <div id="warnings"></div>

@@ -640,3 +640,117 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* ==========================================================
+   Polish layer
+   ========================================================== */
+
+/* Ambient background glow in the two week colours */
+body { position: relative; min-height: 100vh; }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 8% -8%, color-mix(in srgb, var(--cur) 13%, transparent), transparent 70%),
+    radial-gradient(820px 520px at 96% -4%, color-mix(in srgb, var(--ide) 12%, transparent), transparent 70%),
+    var(--bg);
+}
+.topbar { background: color-mix(in srgb, var(--bg) 72%, transparent); }
+.card { background: color-mix(in srgb, var(--surface) 94%, transparent); }
+
+/* Hero with the 168-dot week */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  gap: 40px;
+  align-items: center;
+  padding: 44px 0 28px;
+}
+.hero .intro { padding: 0; }
+.dots-card { margin: 0; padding: 18px 18px 14px; }
+.dots-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 13px; font-weight: 600; }
+.dots {
+  display: grid;
+  grid-template-columns: 14px repeat(24, minmax(0, 1fr));
+  gap: 4px;
+  align-items: center;
+}
+.dots .dl { font-size: 10px; color: var(--faint); font-weight: 600; text-align: left; }
+.dots i {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--c);
+  animation: pop 0.45s cubic-bezier(.2, .8, .3, 1.3) both;
+}
+.dots i.f { background: transparent; box-shadow: inset 0 0 0 1.5px var(--border-strong); }
+.dots.over i:not(.f) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 55%, transparent); }
+@keyframes pop { from { transform: scale(0.3); opacity: 0; } }
+.dots-foot { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
+.dots-foot .neg { color: var(--danger); }
+
+/* Bars: hour ticks */
+.ticks-row { margin-top: -4px; }
+.ticks { position: relative; height: 16px; }
+.ticks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.ticks span:first-child { transform: none; }
+.ticks span:last-child { transform: translateX(-100%); }
+.bar { height: 26px; border-radius: 8px; }
+
+/* Summary cards: soft tint */
+.sum-card { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface) 55%); }
+
+/* Section cards: pack without gaps */
+.sections { display: block; columns: 2; column-gap: 14px; }
+.sections > .section { break-inside: avoid; margin-bottom: 14px; display: block; }
+.section { transition: box-shadow 0.2s, transform 0.2s; }
+.section:focus-within { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent), var(--shadow); }
+.sec-head { background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, transparent), transparent 75%); }
+
+/* Grid: calendar-style labelled blocks */
+.cell {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 0 6px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+.cell.on { background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 92%, #fff), var(--cc)); }
+.cell.now { box-shadow: inset 0 0 0 2px var(--text); position: relative; }
+.wk-head.today { color: var(--text); background: var(--surface-2); }
+.wk-head.today::after { content: ""; display: block; width: 5px; height: 5px; margin: 3px auto 0; border-radius: 50%; background: var(--cur); }
+.chip { transition: background 0.15s, border-color 0.15s, transform 0.1s; }
+.chip:active { transform: scale(0.97); }
+
+.tab { transition: background 0.15s, color 0.15s; }
+
+@media (max-width: 980px) {
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .dots-card { max-width: 560px; }
+  .sections { columns: 1; }
+}
+@media (max-width: 720px) {
+  .hero { padding: 28px 0 20px; }
+}
+@media (max-width: 520px) {
+  .topbar-inner { flex-wrap: wrap; row-gap: 8px; }
+  .tabs { order: 3; width: 100%; }
+  .tab { flex: 1; }
+  .brand-text { display: inline; }
+  .dots { gap: 2.5px; grid-template-columns: 12px repeat(24, minmax(0, 1fr)); }
+  .cell { font-size: 0; padding: 0; }
+}

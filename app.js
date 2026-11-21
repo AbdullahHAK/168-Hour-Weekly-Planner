@@ -536,7 +536,10 @@
         return t > 0 ? `<span style="width:${(t / denom) * 100}%;background:${c.color}" title="${esc(c.name)}: ${fmt(t)} h"></span>` : '';
       }).join('');
       return `<div class="bar-row"><span class="bar-name">${w === 'current' ? 'Current' : 'Ideal'}</span><div class="bar${r.used > HOURS + 0.05 ? ' over' : ''}" role="img" aria-label="${w} week: ${fmt(r.used)} of 168 hours allocated">${segs}</div></div>`;
-    }).join('');
+    }).join('') +
+      `<div class="bar-row ticks-row"><span></span><div class="ticks">${[0, 24, 48, 72, 96, 120, 144, 168].map((t) => `<span style="left:${(t / HOURS) * 100}%">${t}h</span>`).join('')}</div></div>`;
+
+    renderDots();
     $('#bars-legend').innerHTML = allCats.map((c) => `<span><i style="background:${c.color}"></i>${esc(c.name)}</span>`).join('') +
       '<span><i style="background:var(--surface-2);outline:1px solid var(--border-strong)"></i>Free</span>';
 
@@ -555,6 +558,36 @@
         <tr class="free"><td>✅ Free Time</td><td class="${negc(fc)}">${fmt(fc)}</td><td class="${negc(fi)}">${fmt(fi)}</td><td><span class="delta ${deltaClass(fi - fc)}">${fmtDelta(fi - fc)}</span></td></tr>
         <tr class="total"><td>❌ Total Non-Free Time</td><td>${fmt(R.current.used)}</td><td>${fmt(R.ideal.used)}</td><td><span class="delta ${deltaClass(R.ideal.used - R.current.used)}">${fmtDelta(R.ideal.used - R.current.used)}</span></td></tr>
       </tbody>`;
+  }
+
+  /* Hero: the week as 168 dots, filled in life-area order. */
+  let dotsWeek = 'ideal';
+  function renderDots() {
+    const r = R[dotsWeek];
+    // Largest-remainder rounding so whole dots never exceed 168.
+    const scale = r.used > HOURS ? HOURS / r.used : 1;
+    const raw = state.cats.map((c) => ({ c, v: Math.max(0, r.areas[c.id].total) * scale }));
+    const counts = raw.map((x) => Math.floor(x.v));
+    let left = Math.min(HOURS, Math.round(sum(raw.map((x) => x.v)))) - sum(counts);
+    raw.map((x, i) => [x.v - Math.floor(x.v), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { counts[i]++; left--; } });
+    const seq = [];
+    raw.forEach((x, i) => { for (let k = 0; k < counts[i]; k++) seq.push(x.c); });
+    let html = '';
+    for (let d = 0; d < 7; d++) {
+      html += `<span class="dl">${DAYS[d][0]}</span>`;
+      for (let h = 0; h < 24; h++) {
+        const c = seq[d * 24 + h];
+        html += c ? `<i style="--c:${c.color}" title="${esc(c.name)}"></i>` : '<i class="f"></i>';
+      }
+    }
+    const dots = $('#dots');
+    dots.innerHTML = html;
+    dots.setAttribute('aria-label', `${dotsWeek} week: ${fmt(r.used)} hours allocated, ${fmt(r.free)} free`);
+    dots.classList.toggle('over', round1(r.free) < 0);
+    $('#dots-foot').innerHTML = round1(r.free) < 0
+      ? `<strong class="neg">${fmt(-r.free)} h over</strong> — this week doesn’t fit in 168 hours`
+      : `<strong>${fmt(r.free)} h</strong> left over each week · each dot is one hour`;
+    document.querySelectorAll('#dots-seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.week === dotsWeek)));
   }
 
   function recalc() {
@@ -653,8 +686,22 @@
       if (k) c.style.setProperty('--cc', k.color); else c.style.removeProperty('--cc');
       const nextH = (h + 1) % 24;
       c.title = `${DAYS[d]} ${hourLabel(h)}–${hourLabel(nextH)} · ${k ? k.name : 'Free'}`;
+      // Calendar-style label at the start of each block.
+      const starts = !!k && !(h > 0 && state.grid[i - 1] === id);
+      c.textContent = starts ? (k.emoji ? k.emoji + ' ' : '') + k.name : '';
     }
+    markNow();
   }
+
+  /* Highlight today's column and the current hour. */
+  function markNow() {
+    const now = new Date();
+    const d = (now.getDay() + 6) % 7; // Mon = 0
+    const i = d * 24 + now.getHours();
+    cells.forEach((c, n) => c && c.classList.toggle('now', n === i));
+    document.querySelectorAll('.wk-head').forEach((b, n) => b.classList.toggle('today', n === d));
+  }
+  setInterval(() => { if (cells.length) markNow(); }, 60000);
 
   function renderPalette() {
     const p = $('#palette');
@@ -925,6 +972,13 @@
       renderAll();
       save();
       toast(mode === 'blank' ? 'Reset to a blank week' : 'Example loaded');
+    });
+
+    $('#dots-seg').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-week]');
+      if (!b) return;
+      dotsWeek = b.dataset.week;
+      renderDots();
     });
 
     // categories
