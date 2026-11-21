@@ -281,6 +281,7 @@
       profile: { name: '', photo: '' },
       hidden: [],
       salah: { place: 'makkah', lat: 21.4225, lng: 39.8262, zone: 'Asia/Riyadh', method: 'Makkah', asr: 'standard', sync: false, markers: false,
+        adj: { fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 },
         current: { prayers: 5, prayerMins: 10, quranMins: 5, dhikrMins: 5, jumuahMins: 60, learnHours: 0, tahajjudNights: 0, tahajjudMins: 0 },
         ideal: { prayers: 5, prayerMins: 15, quranMins: 20, dhikrMins: 10, jumuahMins: 90, learnHours: 2, tahajjudNights: 2, tahajjudMins: 20 } },
     };
@@ -310,6 +311,7 @@
       if (['MWL', 'ISNA', 'Egypt', 'Makkah', 'Karachi'].includes(r.method)) S.method = r.method;
       if (r.asr === 'hanafi' || r.asr === 'standard') S.asr = r.asr;
       S.sync = !!r.sync;
+      if (r.adj && typeof r.adj === 'object') for (const k in S.adj) S.adj[k] = clamp(Math.round(num(r.adj[k])), -60, 60);
       S.markers = !!r.markers;
       const lim = { prayers: 5, prayerMins: 120, quranMins: 600, dhikrMins: 600, jumuahMins: 300, learnHours: 40, tahajjudNights: 7, tahajjudMins: 180 };
       for (const w of WEEKS) if (r[w] && typeof r[w] === 'object') for (const k in lim) if (k in r[w]) S[w][k] = clamp(num(r[w][k]), 0, lim[k]);
@@ -363,10 +365,19 @@
 
   let state = load();
   let saveTimer = null;
+  let saveWarned = false;
   function save() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        saveWarned = false;
+      } catch (e) {
+        if (!saveWarned) {
+          saveWarned = true;
+          toast('Couldn’t save in this browser (storage full or blocked). Try a smaller profile photo, or export a backup.');
+        }
+      }
     }, 150);
   }
 
@@ -680,9 +691,18 @@
     const p = (r.value / r.max) * 100 || 0;
     r.style.setProperty('--p', p + '%');
   }
+  const isSheet = () => window.innerWidth < 600;
   function positionPop(node) {
     const pop = $('#pop');
-    if (window.innerWidth < 600) { pop.classList.add('sheet'); pop.style.left = pop.style.top = ''; return; }
+    const bd = $('#pop-backdrop');
+    if (isSheet()) {
+      pop.classList.add('sheet');
+      pop.style.left = pop.style.top = '';
+      if (bd) bd.hidden = false;
+      liftSheet();
+      return;
+    }
+    if (bd) bd.hidden = true;
     pop.classList.remove('sheet');
     const r = node.getBoundingClientRect();
     const pw = pop.offsetWidth;
@@ -694,10 +714,21 @@
     pop.style.left = left + 'px';
     pop.style.top = top + 'px';
   }
+  // Keep the bottom sheet above the on-screen keyboard (iOS / Android).
+  function liftSheet() {
+    const pop = $('#pop');
+    if (!pop || pop.hidden || !pop.classList.contains('sheet')) return;
+    const vv = window.visualViewport;
+    const gap = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    pop.style.bottom = gap + 'px';
+  }
   function closePop(refocus) {
     const pop = $('#pop');
     if (pop.hidden) return;
     pop.hidden = true;
+    pop.style.bottom = '';
+    const bd = $('#pop-backdrop');
+    if (bd) bd.hidden = true;
     if (popFor) {
       popFor.node.classList.remove('editing');
       if (refocus) popFor.node.focus();
@@ -805,6 +836,7 @@
     week.addEventListener('pointerdown', (e) => {
       const c = e.target.closest('.cell');
       if (!c) return;
+      if (e.pointerType === 'touch' && document.body.classList.contains('grid-scroll')) return; // let the page scroll
       e.preventDefault();
       const i = +c.dataset.i;
       painting = true;
@@ -1222,7 +1254,58 @@
     ['toronto', 'Toronto', 43.6532, -79.3832, 'America/Toronto', 'ISNA'],
     ['losangeles', 'Los Angeles', 34.0522, -118.2437, 'America/Los_Angeles', 'ISNA'],
     ['sydney', 'Sydney', -33.8688, 151.2093, 'Australia/Sydney', 'MWL'],
+    ['jeddah', 'Jeddah', 21.4858, 39.1925, 'Asia/Riyadh', 'Makkah'],
+    ['kuwait', 'Kuwait City', 29.3759, 47.9774, 'Asia/Kuwait', 'Makkah'],
+    ['manama', 'Manama', 26.2285, 50.586, 'Asia/Bahrain', 'Makkah'],
+    ['muscat', 'Muscat', 23.588, 58.3829, 'Asia/Muscat', 'Makkah'],
+    ['abudhabi', 'Abu Dhabi', 24.4539, 54.3773, 'Asia/Dubai', 'Makkah'],
+    ['amman', 'Amman', 31.9454, 35.9284, 'Asia/Amman', 'MWL'],
+    ['jerusalem', 'Al-Quds (Jerusalem)', 31.7767, 35.2345, 'Asia/Jerusalem', 'MWL'],
+    ['beirut', 'Beirut', 33.8938, 35.5018, 'Asia/Beirut', 'MWL'],
+    ['damascus', 'Damascus', 33.5138, 36.2765, 'Asia/Damascus', 'MWL'],
+    ['baghdad', 'Baghdad', 33.3152, 44.3661, 'Asia/Baghdad', 'MWL'],
+    ['tehran', 'Tehran', 35.6892, 51.389, 'Asia/Tehran', 'MWL'],
+    ['ankara', 'Ankara', 39.9334, 32.8597, 'Europe/Istanbul', 'MWL'],
+    ['alexandria', 'Alexandria', 31.2001, 29.9187, 'Africa/Cairo', 'Egypt'],
+    ['casablanca', 'Casablanca', 33.5731, -7.5898, 'Africa/Casablanca', 'MWL'],
+    ['algiers', 'Algiers', 36.7538, 3.0588, 'Africa/Algiers', 'MWL'],
+    ['tunis', 'Tunis', 36.8065, 10.1815, 'Africa/Tunis', 'MWL'],
+    ['khartoum', 'Khartoum', 15.5007, 32.5599, 'Africa/Khartoum', 'Egypt'],
+    ['nairobi', 'Nairobi', -1.2921, 36.8219, 'Africa/Nairobi', 'MWL'],
+    ['kano', 'Kano', 12.0022, 8.592, 'Africa/Lagos', 'MWL'],
+    ['dakar', 'Dakar', 14.7167, -17.4677, 'Africa/Dakar', 'MWL'],
+    ['mogadishu', 'Mogadishu', 2.0469, 45.3182, 'Africa/Mogadishu', 'MWL'],
+    ['rawalpindi', 'Rawalpindi', 33.5651, 73.0169, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['faisalabad', 'Faisalabad', 31.418, 73.0791, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['peshawar', 'Peshawar', 34.0151, 71.5249, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['multan', 'Multan', 30.1575, 71.5249, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['quetta', 'Quetta', 30.1798, 66.975, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['hyderabadpk', 'Hyderabad (PK)', 25.396, 68.3578, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['kabul', 'Kabul', 34.5553, 69.2075, 'Asia/Kabul', 'Karachi', 'hanafi'],
+    ['mumbai', 'Mumbai', 19.076, 72.8777, 'Asia/Kolkata', 'Karachi', 'hanafi'],
+    ['hyderabadin', 'Hyderabad (IN)', 17.385, 78.4867, 'Asia/Kolkata', 'Karachi', 'hanafi'],
+    ['chittagong', 'Chittagong', 22.3569, 91.7832, 'Asia/Dhaka', 'Karachi', 'hanafi'],
+    ['tashkent', 'Tashkent', 41.2995, 69.2401, 'Asia/Tashkent', 'MWL', 'hanafi'],
+    ['baku', 'Baku', 40.4093, 49.8671, 'Asia/Baku', 'MWL'],
+    ['almaty', 'Almaty', 43.222, 76.8512, 'Asia/Almaty', 'MWL', 'hanafi'],
+    ['surabaya', 'Surabaya', -7.2575, 112.7521, 'Asia/Jakarta', 'MWL'],
+    ['singapore', 'Singapore', 1.3521, 103.8198, 'Asia/Singapore', 'MWL'],
+    ['manchester', 'Manchester', 53.4808, -2.2426, 'Europe/London', 'MWL'],
+    ['birmingham', 'Birmingham', 52.4862, -1.8904, 'Europe/London', 'MWL'],
+    ['berlin', 'Berlin', 52.52, 13.405, 'Europe/Berlin', 'MWL'],
+    ['amsterdam', 'Amsterdam', 52.3676, 4.9041, 'Europe/Amsterdam', 'MWL'],
+    ['brussels', 'Brussels', 50.8503, 4.3517, 'Europe/Brussels', 'MWL'],
+    ['stockholm', 'Stockholm', 59.3293, 18.0686, 'Europe/Stockholm', 'MWL'],
+    ['moscow', 'Moscow', 55.7558, 37.6173, 'Europe/Moscow', 'MWL'],
+    ['houston', 'Houston', 29.7604, -95.3698, 'America/Chicago', 'ISNA'],
+    ['dearborn', 'Dearborn', 42.3223, -83.1763, 'America/Detroit', 'ISNA'],
+    ['washington', 'Washington, DC', 38.9072, -77.0369, 'America/New_York', 'ISNA'],
+    ['vancouver', 'Vancouver', 49.2827, -123.1207, 'America/Vancouver', 'ISNA'],
+    ['melbourne', 'Melbourne', -37.8136, 144.9631, 'Australia/Melbourne', 'MWL'],
+    ['johannesburg', 'Johannesburg', -26.2041, 28.0473, 'Africa/Johannesburg', 'MWL'],
+    ['capetown', 'Cape Town', -33.9249, 18.4241, 'Africa/Johannesburg', 'MWL'],
   ];
+  CITIES.sort((a, b) => a[1].localeCompare(b[1]));
   const PRAYERS = [['fajr', 'Fajr'], ['sunrise', 'Sunrise'], ['dhuhr', 'Dhuhr'], ['asr', 'Asr'], ['maghrib', 'Maghrib'], ['isha', 'Isha']];
   const FARD = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
@@ -1345,13 +1428,21 @@
   }
 
   // This week's (Mon–Sun) prayer times in the chosen place.
+  // Prayer times with the user's per-prayer minute adjustments applied.
+  function timesFor(y, m, d) {
+    const s = state.salah;
+    const T = prayerTimes(y, m, d, s);
+    const adj = s.adj || {};
+    for (const k in T) if (adj[k]) T[k] = fixH(T[k] + adj[k] / 60);
+    return T;
+  }
   function weekTimes() {
     const s = state.salah;
     const n = zonedNow(s.zone);
     const base = Date.UTC(n.y, n.m - 1, n.d) - n.dow * 86400000;
     return DAYS.map((_, i) => {
       const dt = new Date(base + i * 86400000);
-      return { date: dt, times: prayerTimes(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), s) };
+      return { date: dt, times: timesFor(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate()) };
     });
   }
   function prayerHoursByDay() {
@@ -1398,6 +1489,18 @@
     $('#salah-asr').value = s.asr;
     $('#salah-sync').checked = s.sync;
     $('#salah-markers').checked = s.markers;
+    const adjBox = $('#salah-adj');
+    if (adjBox) {
+      adjBox.innerHTML = PRAYERS.map(([k, l]) => {
+        const v = (s.adj && s.adj[k]) || 0;
+        return `<div class="adj"><span>${l}</span><button type="button" data-adj="${k}" data-d="-1" aria-label="${l} one minute earlier">−</button><b class="${v ? 'on' : ''}">${v > 0 ? '+' : ''}${v} min</b><button type="button" data-adj="${k}" data-d="1" aria-label="${l} one minute later">+</button></div>`;
+      }).join('');
+      const any = PRAYERS.some(([k]) => s.adj && s.adj[k]);
+      const sum = $('#salah-adj-sum');
+      if (sum) sum.textContent = any ? 'Adjusted' : '';
+    }
+    const la = $('#salah-lat');
+    if (la && document.activeElement !== la && document.activeElement !== $('#salah-lng')) { la.value = s.lat; $('#salah-lng').value = s.lng; }
     document.querySelectorAll('#faith-mode button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === state.mode)));
   }
 
@@ -1431,13 +1534,15 @@
     let next = null;
     for (const k of FARD) if (today[k] > n.h) { next = { k, t: today[k], wait: today[k] - n.h }; break; }
     if (!next) {
-      const tmr = (week[n.dow + 1] || { times: prayerTimes(n.y, n.m, n.d + 1, s) }).times;
+      const tmr = (week[n.dow + 1] || { times: timesFor(n.y, n.m, n.d + 1) }).times;
       next = { k: 'fajr', t: tmr.fajr, wait: 24 - n.h + tmr.fajr };
     }
     const name = (k) => (k === 'dhuhr' && n.dow === 4 && next.k === 'dhuhr' ? 'Jumu’ah' : PRAYERS.find((p) => p[0] === k)[1]);
-    const place = s.place === 'custom' ? 'your location' : (CITIES.find((c) => c[0] === s.place) || [, 'Makkah'])[1];
+    const place = placeLabel();
+    let hijri = '';
+    try { hijri = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric', timeZone: s.zone }).format(new Date()); } catch (e) { /* calendar unsupported */ }
     $('#next-prayer').innerHTML = `
-      <div class="np-label">Next prayer in ${esc(place)}</div>
+      <div class="np-label">Next prayer ${s.place === 'custom' ? '' : 'in '}${esc(place)}${hijri ? ` <span class="np-hijri">· ${esc(hijri)}</span>` : ''}</div>
       <div class="np-name">${name(next.k)}</div>
       <div class="np-time">${fmtTime(next.t)} <span>· in ${fmtDur(next.wait)}</span></div>
       <ol class="np-day">${PRAYERS.map(([k, label]) => `<li class="${k === next.k ? 'on' : ''}${k === 'sunrise' ? ' sr' : ''}${today[k] < n.h && k !== next.k ? ' past' : ''}"><span>${k === 'dhuhr' && n.dow === 4 ? 'Jumu’ah' : label}</span><b>${fmtTime(today[k])}</b></li>`).join('')}</ol>`;
@@ -1445,7 +1550,7 @@
     const head = `<tr><th></th>${PRAYERS.map(([k, l]) => `<th class="${k === 'sunrise' ? 'sr' : ''}">${l}</th>`).join('')}</tr>`;
     const rows = week.map((w, i) => `<tr class="${i === n.dow ? 'today' : ''}"><th>${DAYS[i]} <span>${w.date.getUTCDate()}</span></th>${PRAYERS.map(([k]) => `<td class="${k === 'sunrise' ? 'sr' : ''}">${i === 4 && k === 'dhuhr' ? '<i>J</i> ' : ''}${fmtTimeH(w.times[k])}</td>`).join('')}</tr>`).join('');
     $('#prayer-week').innerHTML = `<thead>${head}</thead><tbody>${rows}</tbody>`;
-    $('#salah-meta').textContent = `${PT_METHODS[s.method].name} · Asr ${s.asr === 'hanafi' ? 'Hanafi' : 'standard (Shafi‘i, Maliki, Hanbali)'} · times in ${s.zone.replace(/_/g, ' ')}`;
+    $('#salah-meta').textContent = `${s.place === 'custom' ? fmtCoord(s.lat, s.lng) + ' · ' : ''}${PT_METHODS[s.method].name} · Asr ${s.asr === 'hanafi' ? 'Hanafi' : 'standard (Shafi‘i, Maliki, Hanbali)'} · times in ${s.zone.replace(/_/g, ' ')}`;
     // faith totals
     const w = state.mode;
     const t = faithHours(s[w]);
@@ -1466,21 +1571,70 @@
     save();
   }
 
+  // Distance in km between two coordinates.
+  function km(a1, o1, a2, o2) {
+    const dA = rad(a2 - a1);
+    const dO = rad(o2 - o1);
+    const h = Math.sin(dA / 2) ** 2 + Math.cos(rad(a1)) * Math.cos(rad(a2)) * Math.sin(dO / 2) ** 2;
+    return 12742 * Math.asin(Math.sqrt(h));
+  }
+  function nearestCity(lat, lng) {
+    let best = null;
+    for (const c of CITIES) { const d = km(lat, lng, c[2], c[3]); if (!best || d < best.d) best = { c, d }; }
+    return best;
+  }
+  const fmtCoord = (lat, lng) => `${Math.abs(lat).toFixed(3)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(3)}°${lng >= 0 ? 'E' : 'W'}`;
+  function placeLabel() {
+    const s = state.salah;
+    if (s.place !== 'custom') return (CITIES.find((c) => c[0] === s.place) || [, 'Makkah'])[1];
+    const n = nearestCity(s.lat, s.lng);
+    return n && n.d < 60 ? `near ${n.c[1]}` : fmtCoord(s.lat, s.lng);
+  }
+  function setCustomPlace(lat, lng, how) {
+    const n = nearestCity(lat, lng);
+    Object.assign(state.salah, {
+      place: 'custom',
+      lat: Math.round(lat * 10000) / 10000,
+      lng: Math.round(lng * 10000) / 10000,
+      // GPS: you are there, so your device's time zone is right. Typed coordinates:
+      // use the time zone of the nearest known city (within ~600 km).
+      zone: how === 'manual' && n && n.d < 600 ? n.c[4] : Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    });
+    // Suggest the usual method for the region, the first time only.
+    if (n && n.d < 400) { state.salah.method = n.c[5]; state.salah.asr = n.c[6] || state.salah.asr; }
+    renderSalah();
+    paintCells();
+    save();
+  }
   function useMyLocation() {
-    if (!navigator.geolocation) { toast('Location isn’t available in this browser'); return; }
+    const sel = $('#salah-city');
+    const revert = () => { if (sel) sel.value = state.salah.place; };
+    if (!window.isSecureContext) { toast('Location needs a secure (https) page. Pick a city instead.'); revert(); return; }
+    if (!navigator.geolocation) { toast('Location isn’t available in this browser. Pick a city instead.'); revert(); return; }
+    const btn = $('#salah-locate');
+    if (btn) { btn.disabled = true; btn.classList.add('busy'); }
+    const done = () => { if (btn) { btn.disabled = false; btn.classList.remove('busy'); } };
     toast('Finding your location…');
-    navigator.geolocation.getCurrentPosition((pos) => {
-      Object.assign(state.salah, {
-        place: 'custom',
-        lat: round1(pos.coords.latitude * 1000) / 1000,
-        lng: round1(pos.coords.longitude * 1000) / 1000,
-        zone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      });
-      renderSalah();
-      paintCells();
-      save();
-      toast('Prayer times set for your location');
-    }, () => toast('Couldn’t get your location. Pick a city instead.'), { timeout: 10000, maximumAge: 3600000 });
+    const ok = (pos) => {
+      done();
+      const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+      setCustomPlace(lat, lng, 'gps');
+      const near = nearestCity(lat, lng);
+      toast(`Location set: ${near && near.d < 60 ? `near ${near.c[1]}` : fmtCoord(lat, lng)}${accuracy ? ` (±${accuracy < 1000 ? Math.round(accuracy) + ' m' : Math.round(accuracy / 1000) + ' km'})` : ''}`);
+    };
+    const fail = (err, triedPrecise) => {
+      if (err && err.code === 3 && triedPrecise) { // timed out: retry with a quicker, coarse fix
+        navigator.geolocation.getCurrentPosition(ok, (e2) => fail(e2, false), { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 });
+        return;
+      }
+      done();
+      revert();
+      const msg = err && err.code === 1
+        ? 'Location is blocked for this site. Allow it in your browser’s site settings, or pick a city / enter coordinates.'
+        : err && err.code === 3 ? 'Finding your location took too long. Try again outdoors, or pick a city.' : 'Couldn’t get your location. Pick a city or enter coordinates.';
+      toast(msg);
+    };
+    navigator.geolocation.getCurrentPosition(ok, (e) => fail(e, true), { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
   }
 
   function loadIdealMuslimWeek() {
@@ -1802,6 +1956,33 @@
     on('#pf-drop', 'drop', (e) => { e.preventDefault(); e.currentTarget.classList.remove('drag'); processPhoto(e.dataTransfer.files[0]); });
     on('#salah-city', 'change', (e) => { if (e.target.value === 'custom') useMyLocation(); else setPlace(e.target.value); });
     on('#salah-locate', 'click', useMyLocation);
+    on('#salah-adj', 'click', (e) => {
+      const b = e.target.closest('[data-adj]');
+      if (!b) return;
+      const k = b.dataset.adj;
+      state.salah.adj[k] = clamp((state.salah.adj[k] || 0) + +b.dataset.d, -60, 60);
+      renderSalah();
+      paintCells();
+      save();
+    });
+    on('#salah-adj-reset', 'click', () => { for (const k in state.salah.adj) state.salah.adj[k] = 0; renderSalah(); paintCells(); save(); });
+    on('#salah-coords', 'submit', (e) => {
+      e.preventDefault();
+      const lat = parseFloat(String($('#salah-lat').value).replace(',', '.'));
+      const lng = parseFloat(String($('#salah-lng').value).replace(',', '.'));
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+        toast('Enter a latitude (−90 to 90) and longitude (−180 to 180)');
+        return;
+      }
+      setCustomPlace(lat, lng, 'manual');
+      toast(`Location set: ${placeLabel()}`);
+    });
+    on('#btn-scrollmode', 'click', (e) => {
+      const on2 = document.body.classList.toggle('grid-scroll');
+      e.currentTarget.setAttribute('aria-pressed', String(on2));
+      e.currentTarget.querySelector('span').textContent = on2 ? 'Scrolling' : 'Painting';
+      toast(on2 ? 'Scroll mode: swipe to move around. Tap again to paint.' : 'Paint mode: drag to paint hours.');
+    });
     on('#salah-method', 'change', (e) => { state.salah.method = e.target.value; renderSalah(); paintCells(); save(); });
     on('#salah-asr', 'change', (e) => { state.salah.asr = e.target.value; renderSalah(); paintCells(); save(); });
     on('#salah-sync', 'change', (e) => { state.salah.sync = e.target.checked; recalc(); renderTally(); });
@@ -1828,7 +2009,19 @@
       if (!$('#pop').hidden && !e.target.closest('#pop') && !e.target.closest('.num')) closePop();
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(true); });
-    window.addEventListener('resize', () => closePop());
+    // Only close the editor on real layout changes (rotation / window resize),
+    // never when a phone keyboard opens or the address bar slides away.
+    let lastW = window.innerWidth;
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth;
+      if (Math.abs(w - lastW) > 60) { lastW = w; closePop(); return; }
+      if (popFor && !$('#pop').hidden) (isSheet() ? liftSheet() : positionPop(popFor.node));
+    });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', liftSheet);
+      window.visualViewport.addEventListener('scroll', liftSheet);
+    }
+    on('#pop-backdrop', 'click', () => closePop());
 
     // export menu
     const menuBtn = $('#btn-export');

@@ -1,0 +1,15 @@
+{
+  "name": "168 Hours — Weekly Time Planner",
+  "short_name": "168 Hours",
+  "description": "Balance your 168 hours, compare with the greats, plan around Salah, and build a schedule in one tap.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbfaf8",
+  "theme_color": "#fbfaf8",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

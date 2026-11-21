@@ -4,7 +4,7 @@ Every week has exactly **168 hours**. Plan them like a budget, see how your week
 
 ### ▶ **[Open the live app](https://abdullahhak.github.io/168-Hour-Weekly-Planner/)**
 
-There's nothing to sign up for or install. Your plan is saved in your own browser and never leaves your device.
+There's nothing to sign up for or install. Your plan is saved in your own browser and never leaves your device. It works on phones too, and you can add it to your home screen: use **Share → Add to Home Screen** on iPhone, or **Install app** on Android or desktop Chrome.
 
 ---
 
@@ -36,7 +36,7 @@ The 8 life areas are Sleep, Work, Food, Chores, Childcare, Fitness, Entertainmen
 ### 3 · Schedule
 
 - Tap **Auto-fill** to turn your plan into a schedule. Sleep goes at night, work from 9 on work days, meals at mealtimes, and everything else in the evenings and at weekends.
-- To fine-tune, pick a category and **click or drag** on the 7 × 24 grid.
+- To fine-tune, pick a category and **click or drag** on the 7 × 24 grid. On a phone, tap **Painting / Scrolling** to switch between painting cells and scrolling the page.
   - Drag over the same colour to erase it.
   - Click a day name or an hour to fill the whole column or row.
   - Keys <kbd>1</kbd>–<kbd>9</kbd> pick a category and <kbd>E</kbd> picks the eraser.
@@ -46,7 +46,9 @@ The 8 life areas are Sleep, Work, Food, Chores, Childcare, Fitness, Entertainmen
 
 A page for planning your week around the five daily prayers:
 
-- **Prayer times for the whole week.** Pick a city or tap **Use my location**, and choose a calculation method and Asr school (Standard or Hanafi).
+- **Prayer times for the whole week.** Choose from 70+ cities, tap **Use my location**, or **enter exact coordinates** (for example from Google Maps). Then choose a calculation method and Asr school (Standard or Hanafi).
+  - **Adjust times to match my mosque** lets you shift each prayer by ±1 minute at a time.
+  - Today's Hijri date (Umm al-Qura calendar) appears next to the countdown.
   - Times are calculated on your device; no data is sent anywhere.
   - Your local mosque's timetable may differ by a few minutes.
 - **Next prayer countdown** and today's times at a glance.
