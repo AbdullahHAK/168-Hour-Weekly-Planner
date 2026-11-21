@@ -257,6 +257,7 @@
     bolt: '<path d="M13 3 5 14h6l-1 7 8-11h-6l1-7Z"/>',
     play: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/>',
     people: '<circle cx="9" cy="9" r="3.5"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 15.2c.6-.1 1.3-.2 2-.2 2.8 0 4 1.8 4 4"/>',
+    crescent: '<path d="M15.5 3.5A8.5 8.5 0 1 0 20.5 16 7 7 0 0 1 15.5 3.5Z"/><path d="m18 6 .5 1.2 1.2.5-1.2.5L18 9.4l-.5-1.2-1.2-.5 1.2-.5L18 6Z"/>',
     star: '<path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7L12 3Z"/>',
   };
   const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.star}</svg>`;
@@ -277,6 +278,9 @@
       cmpId: 'musk',
       cmpMode: 'current',
       lbMetric: 'balance',
+      salah: { place: 'makkah', lat: 21.4225, lng: 39.8262, zone: 'Asia/Riyadh', method: 'Makkah', asr: 'standard', sync: false, markers: false,
+        current: { prayers: 5, prayerMins: 10, quranMins: 5, dhikrMins: 5, jumuahMins: 60, learnHours: 0, tahajjudNights: 0, tahajjudMins: 0 },
+        ideal: { prayers: 5, prayerMins: 15, quranMins: 20, dhikrMins: 10, jumuahMins: 90, learnHours: 2, tahajjudNights: 2, tahajjudMins: 20 } },
     };
   }
 
@@ -287,7 +291,21 @@
     if (raw.view === 'grid' || raw.view === 'calc') s.view = raw.view;
     if (raw.mode === 'current' || raw.mode === 'ideal') s.mode = raw.mode;
     if (raw.target === 'current' || raw.target === 'ideal') s.target = raw.target;
-    if (raw.view === 'compare') s.view = 'compare';
+    if (raw.view === 'compare' || raw.view === 'salah') s.view = raw.view;
+    if (raw.salah && typeof raw.salah === 'object') {
+      const r = raw.salah;
+      const S = s.salah;
+      if (typeof r.place === 'string') S.place = r.place.slice(0, 20);
+      if (Number.isFinite(r.lat) && Math.abs(r.lat) <= 90) S.lat = r.lat;
+      if (Number.isFinite(r.lng) && Math.abs(r.lng) <= 180) S.lng = r.lng;
+      if (typeof r.zone === 'string' && /^[\w/+-]{1,40}$/.test(r.zone)) S.zone = r.zone;
+      if (['MWL', 'ISNA', 'Egypt', 'Makkah', 'Karachi'].includes(r.method)) S.method = r.method;
+      if (r.asr === 'hanafi' || r.asr === 'standard') S.asr = r.asr;
+      S.sync = !!r.sync;
+      S.markers = !!r.markers;
+      const lim = { prayers: 5, prayerMins: 120, quranMins: 600, dhikrMins: 600, jumuahMins: 300, learnHours: 40, tahajjudNights: 7, tahajjudMins: 180 };
+      for (const w of WEEKS) if (r[w] && typeof r[w] === 'object') for (const k in lim) if (k in r[w]) S[w][k] = clamp(num(r[w][k]), 0, lim[k]);
+    }
     if (raw.cmpMode === 'current' || raw.cmpMode === 'ideal') s.cmpMode = raw.cmpMode;
     if (typeof raw.cmpId === 'string') s.cmpId = raw.cmpId;
     if (typeof raw.lbMetric === 'string') s.lbMetric = raw.lbMetric;
@@ -309,6 +327,7 @@
           builtin: false,
           name: typeof c.name === 'string' && c.name.trim() ? c.name.slice(0, 40) : 'New area',
           color: /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : CUSTOM_COLORS[0],
+          linked: c.linked === 'salah' ? 'salah' : undefined,
           current: Math.max(0, num(c.current)),
           ideal: Math.max(0, num(c.ideal)),
         });
@@ -491,6 +510,16 @@
           <h3>${esc(c.name)}</h3>
           <div class="story-total"><span class="t-num" data-total="${c.id}"></span><span class="t-delta" data-delta="${c.id}"></span></div>
         </header>`;
+      if (c.linked === 'salah') {
+        card.querySelector('.story-icon').innerHTML = icon('crescent');
+        const p = el('p', { class: 'story-text' }, 'Prayers, Quran, dhikr, Jumu’ah and learning, planned on the Salah page. ');
+        const go = el('button', { class: 'linkish', type: 'button' }, 'Edit on the Salah page →');
+        go.addEventListener('click', () => { setView('salah'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        p.append(go);
+        card.append(p, el('div', { class: 'story-bar' }, '<span></span>'));
+        root.append(card);
+        continue;
+      }
       const p = el('p', { class: 'story-text' });
       p.append(document.createTextNode('I spend '));
       p.append(makeChip({ k: c.id, custom: c, pre: `${c.name}:`, post: 'hours per week.', unit: 'h', max: 168, smax: 40, step: 0.5 }));
@@ -504,11 +533,11 @@
     refreshChips();
   }
 
-  function getVal(def, w = state.mode) { return def.custom ? num(def.custom[w]) : state[w][def.k]; }
+  function getVal(def, w = state.mode) { return def.faith ? state.salah[w][def.k] : def.custom ? num(def.custom[w]) : state[w][def.k]; }
   function setVal(def, v, w = state.mode) {
     v = clamp(Math.round(v / def.step) * def.step, 0, def.max);
     v = Math.round(v * 100) / 100;
-    if (def.custom) def.custom[w] = v; else state[w][def.k] = v;
+    if (def.faith) state.salah[w][def.k] = v; else if (def.custom) def.custom[w] = v; else state[w][def.k] = v;
     return v;
   }
 
@@ -604,7 +633,7 @@
         <label class="pop-input"><input type="number" inputmode="decimal" min="0" max="${def.max}" step="${def.step}" value="${v}" aria-label="Value" /><span>${def.unit === '×' ? 'times' : esc(def.unit)}</span></label>
         <button class="pop-step" type="button" data-step="1" aria-label="Increase">+</button>
       </div>
-      <input class="pop-range" type="range" min="0" max="${Math.max(def.smax, v)}" step="${def.step}" value="${v}" aria-label="Slider" style="--c:${cat(def.custom ? def.custom.id : def.section).color}" />
+      <input class="pop-range" type="range" min="0" max="${Math.max(def.smax, v)}" step="${def.step}" value="${v}" aria-label="Slider" style="--c:${def.faith ? FAITH_COLOR : cat(def.custom ? def.custom.id : def.section).color}" />
       <div class="pop-quick">${presets.map((p) => `<button type="button" data-v="${p}">${unitLabel(def.unit, p)}</button>`).join('')}</div>
       <div class="pop-foot"><span class="muted">${state.mode === 'ideal' ? `Now: ${unitLabel(def.unit, getVal(def, 'current'))}` : 'Tip: drag numbers sideways'}</span><button class="btn small primary" type="button" data-done>Done</button></div>`;
     pop.hidden = false;
@@ -693,6 +722,7 @@
 
   /* ---------- Recalc ---------- */
   function recalc() {
+    syncFaith();
     R = { current: computeWeek('current'), ideal: computeWeek('ideal') };
     renderRing();
     renderInsight();
@@ -700,6 +730,7 @@
     renderReceipt();
     renderTally();
     renderCompare();
+    renderSalah();
     if (popFor && !$('#pop').hidden && !$('#pop').classList.contains('sheet')) positionPop(popFor.node);
     save();
   }
@@ -824,6 +855,23 @@
       if (k) c.style.setProperty('--cc', k.color); else c.style.removeProperty('--cc');
       c.title = `${DAYS[d]} ${hourLabel(h)}–${hourLabel((h + 1) % 24)} · ${k ? k.name : 'Free'}`;
       c.textContent = k && !(h > 0 && state.grid[i - 1] === id) ? k.name : '';
+      c.classList.remove('pr');
+      delete c.dataset.pr;
+    }
+    if (state.salah && state.salah.markers) {
+      weekTimes().forEach((w, d) => {
+        for (const k of FARD) {
+          const t = w.times[k];
+          if (!Number.isFinite(t)) continue;
+          const c = cells[d * 24 + Math.floor(t)];
+          if (!c) continue;
+          const label = k === 'dhuhr' && d === 4 ? 'Jumu’ah' : PRAYERS.find((p) => p[0] === k)[1];
+          c.classList.add('pr');
+          c.dataset.pr = c.dataset.pr ? c.dataset.pr + ' · ' + label : label;
+          c.style.setProperty('--pm', `${Math.round((t % 1) * 100)}%`);
+          c.title += ` · ${label} ${fmtTime(t)}`;
+        }
+      });
     }
     markNow();
   }
@@ -861,8 +909,9 @@
     const all = [0, 1, 2, 3, 4, 5, 6];
 
     // Sleep: ends at 7:00 (8:00 at weekends); overflow goes to the late evening.
+    const PH = prayerHoursByDay();
     spread(want.sleep, all).forEach((s, d) => {
-      const wake = d >= 5 ? 8 : 7;
+      const wake = PH ? PH[d][0] : d >= 5 ? 8 : 7;
       for (let n = 0; n < s; n++) {
         const h = wake - 1 - n;
         if (h >= 0) put('sleep', d, h); else put('sleep', d, 24 + h);
@@ -887,13 +936,15 @@
       fitness: [7, 18, 17, 10, 11], chores: [10, 11, 14, 15, 18], childcare: [17, 18, 16, 15, 8, 10],
       relationships: [20, 19, 15, 16, 14], entertainment: [21, 22, 20, 15, 16],
     };
-    const rest2 = state.cats.filter((c) => !['sleep', 'work', 'food'].includes(c.id));
+    const rest2 = state.cats.filter((c) => !['sleep', 'work', 'food'].includes(c.id))
+      .sort((a, b) => (b.id === 'faith') - (a.id === 'faith')); // faith first, at prayer times
     for (const c of rest2) {
       const slots = (prefs[c.id] || [18, 19, 20, 14, 15]).concat([...Array(24).keys()].filter((h) => h >= 8));
       let guard = 0;
       let d = rest2.indexOf(c) % 7;
       while (want[c.id] > 0 && guard < 7 * 40) {
-        for (const h of slots) { if (put(c.id, d, h)) break; }
+        const s = c.id === 'faith' && PH ? PH[d].concat(slots) : slots;
+        for (const h of s) { if (put(c.id, d, h)) break; }
         d = (d + 1) % 7;
         guard++;
       }
@@ -1066,7 +1117,16 @@
           <div class="fly-bar r"><i style="width:${(b / max) * 100}%"></i><span class="v">${fmt(them[k])}</span></div>
         </div>`;
       }).join('');
-    $('#vs-note').innerHTML = `${esc(p.note || '')}${p.credit ? ` <span class="credit">Photo: ${esc(p.credit)}</span>` : ''}`;
+    const credit = p.credit
+      ? `<span class="credit">Photo: ${p.creditUrl && /^https:\/\//.test(p.creditUrl) ? `<a href="${esc(p.creditUrl)}" target="_blank" rel="noopener">${esc(p.credit)}</a>` : esc(p.credit)}</span>`
+      : '';
+    $('#vs-note').innerHTML = `${esc(p.note || '')}${credit}`;
+    const cl = $('#credits');
+    if (cl && !cl.dataset.done) {
+      cl.dataset.done = '1';
+      cl.innerHTML = PEOPLE.filter((x) => x.photo && x.credit).map((x) =>
+        `<li><b>${esc(x.name)}</b>: ${x.creditUrl && /^https:\/\//.test(x.creditUrl) ? `<a href="${esc(x.creditUrl)}" target="_blank" rel="noopener">${esc(x.credit)}</a>` : esc(x.credit)}</li>`).join('');
+    }
     renderLeaderboard();
   }
 
@@ -1100,6 +1160,331 @@
         beaten.length ? `, ahead of ${esc(beaten.slice(0, 3).join(', '))}${beaten.length > 3 ? ` and ${beaten.length - 3} more` : ''}.` : '. Room to climb!'}</span>`;
   }
 
+
+  /* ==========================================================
+     SALAH VIEW — a week planned around the five daily prayers
+     Prayer times are calculated on-device with standard
+     astronomical formulas (sun declination + equation of time).
+     ========================================================== */
+  const PT_METHODS = {
+    MWL: { name: 'Muslim World League', fajr: 18, isha: 17 },
+    ISNA: { name: 'ISNA (North America)', fajr: 15, isha: 15 },
+    Egypt: { name: 'Egyptian General Authority', fajr: 19.5, isha: 17.5 },
+    Makkah: { name: 'Umm al-Qura, Makkah', fajr: 18.5, ishaMin: 90 },
+    Karachi: { name: 'University of Islamic Sciences, Karachi', fajr: 18, isha: 18 },
+  };
+  const CITIES = [
+    ['makkah', 'Makkah', 21.4225, 39.8262, 'Asia/Riyadh', 'Makkah'],
+    ['madinah', 'Madinah', 24.4672, 39.6111, 'Asia/Riyadh', 'Makkah'],
+    ['riyadh', 'Riyadh', 24.7136, 46.6753, 'Asia/Riyadh', 'Makkah'],
+    ['dubai', 'Dubai', 25.2048, 55.2708, 'Asia/Dubai', 'Makkah'],
+    ['doha', 'Doha', 25.2854, 51.531, 'Asia/Qatar', 'Makkah'],
+    ['istanbul', 'Istanbul', 41.0082, 28.9784, 'Europe/Istanbul', 'MWL'],
+    ['cairo', 'Cairo', 30.0444, 31.2357, 'Africa/Cairo', 'Egypt'],
+    ['karachi', 'Karachi', 24.8607, 67.0011, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['lahore', 'Lahore', 31.5204, 74.3587, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['islamabad', 'Islamabad', 33.6844, 73.0479, 'Asia/Karachi', 'Karachi', 'hanafi'],
+    ['dhaka', 'Dhaka', 23.8103, 90.4125, 'Asia/Dhaka', 'Karachi', 'hanafi'],
+    ['delhi', 'Delhi', 28.6139, 77.209, 'Asia/Kolkata', 'Karachi', 'hanafi'],
+    ['jakarta', 'Jakarta', -6.2088, 106.8456, 'Asia/Jakarta', 'MWL'],
+    ['kualalumpur', 'Kuala Lumpur', 3.139, 101.6869, 'Asia/Kuala_Lumpur', 'MWL'],
+    ['lagos', 'Lagos', 6.5244, 3.3792, 'Africa/Lagos', 'MWL'],
+    ['london', 'London', 51.5074, -0.1278, 'Europe/London', 'MWL'],
+    ['paris', 'Paris', 48.8566, 2.3522, 'Europe/Paris', 'MWL'],
+    ['newyork', 'New York', 40.7128, -74.006, 'America/New_York', 'ISNA'],
+    ['chicago', 'Chicago', 41.8781, -87.6298, 'America/Chicago', 'ISNA'],
+    ['toronto', 'Toronto', 43.6532, -79.3832, 'America/Toronto', 'ISNA'],
+    ['losangeles', 'Los Angeles', 34.0522, -118.2437, 'America/Los_Angeles', 'ISNA'],
+    ['sydney', 'Sydney', -33.8688, 151.2093, 'Australia/Sydney', 'MWL'],
+  ];
+  const PRAYERS = [['fajr', 'Fajr'], ['sunrise', 'Sunrise'], ['dhuhr', 'Dhuhr'], ['asr', 'Asr'], ['maghrib', 'Maghrib'], ['isha', 'Isha']];
+  const FARD = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+
+  const FAITH_INPUTS = [
+    { k: 'prayers', pre: 'I pray', post: 'times a day.', unit: '×', max: 5, smax: 5, step: 1 },
+    { k: 'prayerMins', pre: 'Each prayer, including wudu, takes about', post: 'minutes.', unit: 'min', max: 120, smax: 45, step: 1 },
+    { k: 'quranMins', pre: 'Each day I read Quran for', post: 'minutes.', unit: 'min', max: 600, smax: 90, step: 5 },
+    { k: 'dhikrMins', pre: 'Each day I do dhikr and du’a for', post: 'minutes.', unit: 'min', max: 600, smax: 60, step: 5 },
+    { k: 'jumuahMins', pre: 'Jumu’ah, with travel, takes', post: 'minutes.', unit: 'min', max: 300, smax: 150, step: 5 },
+    { k: 'learnHours', pre: 'Each week I spend', post: 'hours learning about Islam.', unit: 'h', max: 40, smax: 10, step: 0.5 },
+    { k: 'tahajjudNights', pre: 'I pray Tahajjud', post: 'nights a week.', unit: '×', max: 7, smax: 7, step: 1 },
+    { k: 'tahajjudMins', pre: 'Tahajjud takes about', post: 'minutes.', unit: 'min', max: 180, smax: 60, step: 5 },
+  ];
+  const FAITH_STORY = 'I pray {prayers} a day, about {prayerMins} each including wudu. I read Quran for {quranMins} and do dhikr for {dhikrMins} daily. Jumu’ah takes {jumuahMins} with travel. I learn about Islam {learnHours} a week, and pray Tahajjud {tahajjudNights} a week for {tahajjudMins}.';
+  const FAITH_NOW = { prayers: 5, prayerMins: 10, quranMins: 5, dhikrMins: 5, jumuahMins: 60, learnHours: 0, tahajjudNights: 0, tahajjudMins: 0 };
+  const FAITH_IDEAL = { prayers: 5, prayerMins: 15, quranMins: 20, dhikrMins: 10, jumuahMins: 90, learnHours: 2, tahajjudNights: 2, tahajjudMins: 20 };
+  const FAITH_COLOR = '#dcc488';
+
+  // Weekly faith hours. On Fridays Jumu'ah replaces Dhuhr, so one prayer slot is not double-counted.
+  function faithHours(f) {
+    const slots = f.prayers * 7 - (f.jumuahMins > 0 && f.prayers >= 2 ? 1 : 0);
+    return (slots * f.prayerMins + (f.quranMins + f.dhikrMins) * 7 + f.jumuahMins + f.tahajjudNights * f.tahajjudMins) / 60 + f.learnHours;
+  }
+
+  const rad = (d) => (d * Math.PI) / 180;
+  const deg = (r) => (r * 180) / Math.PI;
+  const dsin = (d) => Math.sin(rad(d));
+  const dcos = (d) => Math.cos(rad(d));
+  const dtan = (d) => Math.tan(rad(d));
+  const fixA = (a) => ((a % 360) + 360) % 360;
+  const fixH = (h) => ((h % 24) + 24) % 24;
+
+  function sunPos(jd) {
+    const D = jd - 2451545.0;
+    const g = fixA(357.529 + 0.98560028 * D);
+    const q = fixA(280.459 + 0.98564736 * D);
+    const L = fixA(q + 1.915 * dsin(g) + 0.02 * dsin(2 * g));
+    const e = 23.439 - 0.00000036 * D;
+    const RA = fixH(deg(Math.atan2(dcos(e) * dsin(L), dcos(L))) / 15);
+    return { decl: deg(Math.asin(dsin(e) * dsin(L))), eqt: q / 15 - RA };
+  }
+  function julian(y, m, d) {
+    if (m <= 2) { y -= 1; m += 12; }
+    const A = Math.floor(y / 100);
+    const B = 2 - A + Math.floor(A / 4);
+    return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5;
+  }
+
+  // Time-zone offset (hours) of an IANA zone on a given date.
+  function tzOffset(zone, date) {
+    try {
+      const f = new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+      const p = Object.fromEntries(f.formatToParts(date).map((x) => [x.type, x.value]));
+      const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute);
+      return Math.round((asUTC - date.getTime()) / 60000) / 60;
+    } catch (e) {
+      return -date.getTimezoneOffset() / 60;
+    }
+  }
+  // "Now" as a date + fractional hour in the chosen zone.
+  function zonedNow(zone) {
+    const now = new Date();
+    const off = tzOffset(zone, now);
+    const z = new Date(now.getTime() + off * 3600000);
+    return { y: z.getUTCFullYear(), m: z.getUTCMonth() + 1, d: z.getUTCDate(), h: z.getUTCHours() + z.getUTCMinutes() / 60 + z.getUTCSeconds() / 3600, dow: (z.getUTCDay() + 6) % 7 };
+  }
+
+  function prayerTimes(y, m, d, cfg) {
+    const { lat, lng, zone } = cfg;
+    const M = PT_METHODS[cfg.method] || PT_METHODS.MWL;
+    const tz = tzOffset(zone, new Date(Date.UTC(y, m - 1, d, 12)));
+    const jd = julian(y, m, d) - lng / (15 * 24);
+    const mid = (t) => fixH(12 - sunPos(jd + t).eqt);
+    const hourAngle = (angle, t, before) => {
+      const dec = sunPos(jd + t).decl;
+      const v = (-dsin(angle) - dsin(dec) * dsin(lat)) / (dcos(dec) * dcos(lat));
+      const a = deg(Math.acos(Math.max(-1, Math.min(1, v)))) / 15;
+      const res = mid(t) + (before ? -a : a);
+      return Math.abs(v) > 1 ? NaN : res;
+    };
+    const asrAngle = (t) => {
+      const dec = sunPos(jd + t).decl;
+      const factor = cfg.asr === 'hanafi' ? 2 : 1;
+      return -deg(Math.atan(1 / (factor + dtan(Math.abs(lat - dec)))));
+    };
+    const t0 = { fajr: 5, sunrise: 6, dhuhr: 12, asr: 13, maghrib: 18, isha: 18 };
+    const T = {};
+    T.fajr = hourAngle(M.fajr, t0.fajr / 24, true);
+    T.sunrise = hourAngle(0.833, t0.sunrise / 24, true);
+    T.dhuhr = mid(t0.dhuhr / 24);
+    T.asr = hourAngle(asrAngle(t0.asr / 24), t0.asr / 24, false);
+    T.maghrib = hourAngle(0.833, t0.maghrib / 24, false);
+    T.isha = M.ishaMin ? T.maghrib + M.ishaMin / 60 : hourAngle(M.isha, t0.isha / 24, false);
+    // High latitudes: fall back to a portion of the night (angle-based rule).
+    const night = fixH(T.sunrise - T.maghrib);
+    const fp = (M.fajr / 60) * night;
+    if (isNaN(T.fajr) || fixH(T.sunrise - T.fajr) > fp) T.fajr = T.sunrise - fp;
+    if (!M.ishaMin) {
+      const ip = (M.isha / 60) * night;
+      if (isNaN(T.isha) || fixH(T.isha - T.maghrib) > ip) T.isha = T.maghrib + ip;
+    }
+    const adj = tz - lng / 15;
+    for (const k in T) T[k] = fixH(T[k] + adj);
+    return T;
+  }
+
+  function fmtTime(h) {
+    if (!Number.isFinite(h)) return '—';
+    let mins = Math.round(h * 60) % 1440;
+    const hh = Math.floor(mins / 60);
+    const mm = mins % 60;
+    const ap = hh < 12 ? 'AM' : 'PM';
+    return `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${ap}`;
+  }
+  // Same, with the AM/PM in a span so small screens can hide it.
+  const fmtTimeH = (h) => fmtTime(h).replace(/ (AM|PM)$/, '<span class="ap"> $1</span>');
+  function fmtDur(h) {
+    const m = Math.max(0, Math.round(h * 60));
+    return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+  }
+
+  // This week's (Mon–Sun) prayer times in the chosen place.
+  function weekTimes() {
+    const s = state.salah;
+    const n = zonedNow(s.zone);
+    const base = Date.UTC(n.y, n.m - 1, n.d) - n.dow * 86400000;
+    return DAYS.map((_, i) => {
+      const dt = new Date(base + i * 86400000);
+      return { date: dt, times: prayerTimes(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), s) };
+    });
+  }
+  function prayerHoursByDay() {
+    if (!state.salah.markers) return null;
+    return weekTimes().map((w) => FARD.map((k) => Math.floor(w.times[k])));
+  }
+
+  function syncFaith() {
+    const s = state.salah;
+    let c = state.cats.find((x) => x.id === 'faith');
+    if (s.sync) {
+      if (!c) {
+        c = { id: 'faith', builtin: false, linked: 'salah', name: 'Faith & prayer', color: FAITH_COLOR, current: 0, ideal: 0 };
+        state.cats.push(c);
+        renderCards();
+        renderSalahCard();
+        renderPalette();
+      }
+      c.linked = 'salah';
+      c.current = round1(faithHours(s.current) * 100) / 100;
+      c.ideal = round1(faithHours(s.ideal) * 100) / 100;
+    } else if (c && c.linked === 'salah') {
+      state.cats = state.cats.filter((x) => x !== c);
+      state.grid = state.grid.map((g) => (g === 'faith' ? null : g));
+      if (state.brush === 'faith') state.brush = 'sleep';
+      renderCards();
+      renderSalahCard();
+      renderPalette();
+      paintCells();
+    }
+  }
+
+  function renderSalahControls() {
+    const s = state.salah;
+    const sel = $('#salah-city');
+    if (!sel) return;
+    if (!sel.options.length) {
+      sel.innerHTML = CITIES.map((c) => `<option value="${c[0]}">${esc(c[1])}</option>`).join('') + '<option value="custom">My location</option>';
+      $('#salah-method').innerHTML = Object.entries(PT_METHODS).map(([k, m]) => `<option value="${k}">${esc(m.name)}</option>`).join('');
+    }
+    if (s.place === 'custom' && !sel.querySelector('option[value="custom"]')) sel.insertAdjacentHTML('beforeend', '<option value="custom">My location</option>');
+    sel.value = s.place;
+    $('#salah-method').value = s.method;
+    $('#salah-asr').value = s.asr;
+    $('#salah-sync').checked = s.sync;
+    $('#salah-markers').checked = s.markers;
+    document.querySelectorAll('#faith-mode button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === state.mode)));
+  }
+
+  function renderSalahCard() {
+    const root = $('#faith-card');
+    if (!root) return;
+    root.style.setProperty('--c', FAITH_COLOR);
+    root.innerHTML = `
+      <header class="story-head">
+        <span class="story-icon">${icon('crescent')}</span>
+        <h3>Faith & prayer</h3>
+        <div class="story-total"><span class="t-num" id="faith-total"></span><span class="t-delta" id="faith-delta"></span></div>
+      </header>`;
+    const p = el('p', { class: 'story-text' });
+    for (const part of FAITH_STORY.split(/(\{\w+\})/)) {
+      const m = part.match(/^\{(\w+)\}$/);
+      if (m) p.append(makeChip({ ...FAITH_INPUTS.find((x) => x.k === m[1]), faith: true, section: 'faith' }));
+      else if (part) p.append(document.createTextNode(part));
+    }
+    root.append(p);
+    refreshChips();
+  }
+
+  function renderSalah() {
+    if (!$('#view-salah')) return;
+    const s = state.salah;
+    const week = weekTimes();
+    const n = zonedNow(s.zone);
+    const today = week[n.dow].times;
+    // next prayer
+    let next = null;
+    for (const k of FARD) if (today[k] > n.h) { next = { k, t: today[k], wait: today[k] - n.h }; break; }
+    if (!next) {
+      const tmr = (week[n.dow + 1] || { times: prayerTimes(n.y, n.m, n.d + 1, s) }).times;
+      next = { k: 'fajr', t: tmr.fajr, wait: 24 - n.h + tmr.fajr };
+    }
+    const name = (k) => (k === 'dhuhr' && n.dow === 4 && next.k === 'dhuhr' ? 'Jumu’ah' : PRAYERS.find((p) => p[0] === k)[1]);
+    const place = s.place === 'custom' ? 'your location' : (CITIES.find((c) => c[0] === s.place) || [, 'Makkah'])[1];
+    $('#next-prayer').innerHTML = `
+      <div class="np-label">Next prayer in ${esc(place)}</div>
+      <div class="np-name">${name(next.k)}</div>
+      <div class="np-time">${fmtTime(next.t)} <span>· in ${fmtDur(next.wait)}</span></div>
+      <ol class="np-day">${PRAYERS.map(([k, label]) => `<li class="${k === next.k ? 'on' : ''}${k === 'sunrise' ? ' sr' : ''}${today[k] < n.h && k !== next.k ? ' past' : ''}"><span>${k === 'dhuhr' && n.dow === 4 ? 'Jumu’ah' : label}</span><b>${fmtTime(today[k])}</b></li>`).join('')}</ol>`;
+    // week table
+    const head = `<tr><th></th>${PRAYERS.map(([k, l]) => `<th class="${k === 'sunrise' ? 'sr' : ''}">${l}</th>`).join('')}</tr>`;
+    const rows = week.map((w, i) => `<tr class="${i === n.dow ? 'today' : ''}"><th>${DAYS[i]} <span>${w.date.getUTCDate()}</span></th>${PRAYERS.map(([k]) => `<td class="${k === 'sunrise' ? 'sr' : ''}">${i === 4 && k === 'dhuhr' ? '<i>J</i> ' : ''}${fmtTimeH(w.times[k])}</td>`).join('')}</tr>`).join('');
+    $('#prayer-week').innerHTML = `<thead>${head}</thead><tbody>${rows}</tbody>`;
+    $('#salah-meta').textContent = `${PT_METHODS[s.method].name} · Asr ${s.asr === 'hanafi' ? 'Hanafi' : 'standard (Shafi‘i, Maliki, Hanbali)'} · times in ${s.zone.replace(/_/g, ' ')}`;
+    // faith totals
+    const w = state.mode;
+    const t = faithHours(s[w]);
+    const tn = $('#faith-total');
+    if (tn) tn.innerHTML = `${fmt(t)}<small> h/wk</small>`;
+    const td = $('#faith-delta');
+    if (td) { const diff = t - faithHours(s.current); td.textContent = w === 'ideal' && round1(diff) !== 0 ? `${fmtDelta(diff)} vs now` : ''; }
+    $('#faith-summary').innerHTML = `That’s <b>${fmt(t)} hours</b> a week, about <b>${Math.round((t / 7) * 60)} minutes</b> a day, or <b>${fmt((t / HOURS) * 100)}%</b> of your 168 hours.`;
+    renderSalahControls();
+  }
+
+  function setPlace(id) {
+    const c = CITIES.find((x) => x[0] === id);
+    if (!c) return;
+    Object.assign(state.salah, { place: c[0], lat: c[2], lng: c[3], zone: c[4], method: c[5], asr: c[6] || 'standard' });
+    renderSalah();
+    paintCells();
+    save();
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) { toast('Location isn’t available in this browser'); return; }
+    toast('Finding your location…');
+    navigator.geolocation.getCurrentPosition((pos) => {
+      Object.assign(state.salah, {
+        place: 'custom',
+        lat: round1(pos.coords.latitude * 1000) / 1000,
+        lng: round1(pos.coords.longitude * 1000) / 1000,
+        zone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      });
+      renderSalah();
+      paintCells();
+      save();
+      toast('Prayer times set for your location');
+    }, () => toast('Couldn’t get your location. Pick a city instead.'), { timeout: 10000, maximumAge: 3600000 });
+  }
+
+  function loadIdealMuslimWeek() {
+    const snap = JSON.stringify({ salah: state.salah, ideal: state.ideal });
+    state.salah.ideal = { ...FAITH_IDEAL };
+    state.salah.sync = true;
+    state.ideal.sleepHours = Math.max(7, state.ideal.sleepHours || 0);
+    state.ideal.windDown = 15;
+    setMode('ideal');
+    renderAll();
+    toast('Loaded an ideal Muslim week', 'Undo', () => {
+      const o = JSON.parse(snap);
+      state.salah = o.salah;
+      state.ideal = o.ideal;
+      renderAll();
+    });
+  }
+
+  function buildPrayerSchedule() {
+    const snap = state.grid.slice();
+    state.salah.sync = true;
+    state.salah.markers = true;
+    state.target = 'ideal';
+    recalc();
+    autoFill('ideal');
+    setView('grid');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast('Built around your prayers. Paint to fine-tune.', 'Undo', () => { state.grid = snap; paintCells(); renderTally(); save(); });
+  }
+
   /* ---------- Views & theme ---------- */
   function setView(v) {
     state.view = v;
@@ -1107,6 +1492,7 @@
     $('#view-calc').hidden = v !== 'calc';
     $('#view-compare').hidden = v !== 'compare';
     $('#view-grid').hidden = v !== 'grid';
+    if ($('#view-salah')) $('#view-salah').hidden = v !== 'salah';
     document.body.dataset.view = v;
     closePop();
     save();
@@ -1243,6 +1629,7 @@
   function renderAll(rebuildCatList = true) {
     renderPeople();
     renderCards();
+    renderSalahCard();
     renderPalette();
     paintCells();
     renderMode();
@@ -1282,6 +1669,16 @@
       renderLeaderboard();
       save();
     });
+    on('#salah-city', 'change', (e) => { if (e.target.value === 'custom') useMyLocation(); else setPlace(e.target.value); });
+    on('#salah-locate', 'click', useMyLocation);
+    on('#salah-method', 'change', (e) => { state.salah.method = e.target.value; renderSalah(); paintCells(); save(); });
+    on('#salah-asr', 'change', (e) => { state.salah.asr = e.target.value; renderSalah(); paintCells(); save(); });
+    on('#salah-sync', 'change', (e) => { state.salah.sync = e.target.checked; recalc(); renderTally(); });
+    on('#salah-markers', 'change', (e) => { state.salah.markers = e.target.checked; paintCells(); save(); });
+    on('#faith-mode', 'click', (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
+    on('#btn-muslim-week', 'click', loadIdealMuslimWeek);
+    on('#btn-prayer-schedule', 'click', buildPrayerSchedule);
+    setInterval(() => { if (state.view === 'salah') renderSalah(); }, 30000);
     on('#pill', 'click', () => $('#ring').scrollIntoView({ behavior: 'smooth', block: 'center' }));
 
     // Show the floating pill once the big ring scrolls away.

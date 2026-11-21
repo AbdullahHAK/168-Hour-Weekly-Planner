@@ -690,3 +690,135 @@ img, svg { max-width: 100%; }
   background: var(--primary); color: var(--primary-text); border-radius: 12px; box-shadow: var(--shadow-pop); font-size: 14px;
 }
 .reload-bar button { border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; background: var(--ide); color: #fff; }
+
+/* ==========================================================
+   Photos & credits
+   ========================================================== */
+.av img { object-position: center 30%; }
+.credits { margin: 14px 4px 0; font-size: 12px; color: var(--faint); }
+.credits summary { cursor: pointer; color: var(--muted); width: fit-content; }
+.credits ul { margin: 8px 0; padding-left: 18px; line-height: 1.7; }
+.credits a, .credit a { color: inherit; }
+.credits p { margin: 4px 0 0; }
+.credit { display: block; margin-top: 6px; font-size: 11.5px; font-style: normal; }
+
+/* ==========================================================
+   Salah
+   ========================================================== */
+:root { --gold-soft: #f6eccd; --gold-ink: #8a6a1c; }
+:root[data-theme="dark"] { --gold-soft: rgba(220, 196, 136, 0.12); --gold-ink: #e3c983; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gold-soft: rgba(220, 196, 136, 0.12); --gold-ink: #e3c983; } }
+
+.tab.salah-tab svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.tab.salah-tab[aria-selected="true"] { color: var(--gold-ink); }
+.pulse.gold { background: #dcc488; box-shadow: 0 0 0 4px var(--gold-soft); }
+.linkish { border: 0; background: none; padding: 0; color: var(--text); font-weight: 600; cursor: pointer; text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+
+.salah-hero { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 40px; align-items: end; padding-bottom: 28px; }
+.salah-hero .intro.small { padding-bottom: 0; }
+.next-prayer {
+  padding: 22px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 90% at 100% 0%, var(--gold-soft), transparent 60%), var(--surface);
+}
+.np-label { font-size: 13px; color: var(--muted); }
+.np-name { font-size: 40px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.1; margin-top: 4px; }
+.np-time { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.np-time span { color: var(--gold-ink); font-weight: 500; font-size: 15px; }
+.np-day { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.np-day li { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 12px; color: var(--muted); }
+.np-day li b { font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+.np-day li.on { background: var(--gold-soft); color: var(--gold-ink); box-shadow: inset 0 0 0 1.5px #dcc488; }
+.np-day li.past { opacity: 0.5; }
+.np-day li.sr b { font-weight: 500; color: var(--muted); }
+
+.salah-loc { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding: 16px 18px; margin-bottom: 16px; }
+.fieldset { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); font-weight: 500; flex: 1 1 180px; min-width: 0; }
+.fieldset select {
+  appearance: none; -webkit-appearance: none; width: 100%;
+  border: 1px solid var(--border-strong); border-radius: 10px; height: 38px; padding: 0 34px 0 12px;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 16px;
+  font: 500 14px var(--font); color: var(--text); cursor: pointer;
+}
+.fieldset select:focus { outline: none; border-color: var(--ide); box-shadow: 0 0 0 3px var(--ring); }
+.salah-loc .btn { height: 38px; }
+
+.salah-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.week-times { padding: 20px 20px 16px; }
+.wt-head h2, .faith-top h2 { font-size: 17px; }
+.wt-head p { margin: 4px 0 12px; font-size: 12.5px; }
+.table-scroll { overflow-x: auto; margin: 0 -4px; }
+table.pt { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.pt th, .pt td { padding: 9px 6px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.pt thead th { font-size: 12px; font-weight: 500; color: var(--faint); }
+.pt tbody th { text-align: left; font-weight: 600; }
+.pt tbody th span { color: var(--faint); font-weight: 400; margin-left: 4px; }
+.pt td.sr { color: var(--faint); }
+.pt td i { font-style: normal; font-size: 10.5px; color: var(--gold-ink); background: var(--gold-soft); padding: 1px 5px; border-radius: 5px; margin-right: 2px; }
+.pt tr.today th, .pt tr.today td { background: var(--gold-soft); }
+.pt tr.today th { border-radius: 8px 0 0 8px; }
+.pt tr.today td:last-child { border-radius: 0 8px 8px 0; }
+.pt tr:last-child th, .pt tr:last-child td { border-bottom: 0; }
+
+.faith-col { display: grid; gap: 12px; }
+.faith-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.story.faith { background: radial-gradient(140% 80% at 100% 0%, var(--gold-soft), transparent 55%), var(--surface); }
+.faith-summary { margin: 0; font-size: 13.5px; color: var(--muted); }
+.faith-summary b { color: var(--text); }
+.switch { display: flex; align-items: center; gap: 11px; font-size: 14px; cursor: pointer; line-height: 1.35; }
+.switch small { color: var(--faint); }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+.switch .track { flex: none; width: 38px; height: 22px; border-radius: 99px; background: var(--surface-3); position: relative; transition: background 0.2s; }
+.switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: transform 0.2s; }
+.switch input:checked + .track { background: #c9ad64; }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--ide); outline-offset: 2px; }
+.salah-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.salah-actions .btn { flex: 1 1 auto; }
+
+.habits-title { font-size: 22px; letter-spacing: -0.03em; margin: 48px 0 14px; }
+.habits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.habit { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.habit .h-ico { font-size: 22px; display: block; margin-bottom: 10px; }
+.habit b { font-size: 15px; }
+.habit p { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+
+/* Prayer markers on the schedule */
+.cell { position: relative; }
+.cell.pr::after {
+  content: ""; position: absolute; left: 0; right: 0; top: var(--pm, 0%); height: 2px;
+  background: #c9ad64; box-shadow: 0 0 0 1px var(--surface);
+}
+.cell.pr::before {
+  content: attr(data-pr); position: absolute; right: 4px; top: 0; font-size: 9.5px; font-weight: 600; color: var(--gold-ink); line-height: 20px;
+}
+.cell.pr.on::before { color: rgba(28, 27, 26, 0.6); }
+
+@media (max-width: 980px) {
+  .salah-hero, .salah-grid { grid-template-columns: minmax(0, 1fr); }
+  .habits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .tab.salah-tab svg { display: none; }
+  .tab { padding: 6px 6px; font-size: 13.5px; }
+  .np-name { font-size: 34px; }
+  .salah-loc { padding: 14px; }
+  .salah-loc .btn { width: 100%; }
+  .habits { grid-template-columns: minmax(0, 1fr); }
+  .cell.pr::before { display: none; }
+  .salah-actions .btn { width: 100%; }
+}
+.pt td i { font-size: 10px; padding: 1px 4px; }
+.pt-legend { font-size: 12px; }
+@media (max-width: 600px) {
+  .pt .sr { display: none; }
+  .pt .ap { display: none; }
+  .pt th, .pt td { padding: 9px 3px; font-size: 13px; }
+  .pt tbody th span { display: none; }
+  .week-times { padding: 16px 12px 12px; }
+}
+/* Prayer markers: a small gold tick + label instead of a line through the block */
+.cell.pr { padding-right: 44px; }
+.cell.pr::after { right: auto; width: 7px; height: 7px; border-radius: 50%; left: 3px; top: calc(var(--pm, 0%) - 3px); top: clamp(2px, calc(var(--pm, 0%) - 3px), 11px); background: #c9ad64; box-shadow: 0 0 0 1.5px var(--surface); }
+.cell.pr.on { padding-left: 14px; }
+.cell.pr::before { font-size: 9px; letter-spacing: 0.02em; }
+@media (max-width: 600px) { .cell.pr { padding: 0; } .cell.pr.on { padding: 0; } }

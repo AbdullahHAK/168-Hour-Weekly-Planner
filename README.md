@@ -42,6 +42,23 @@ The 8 life areas are Sleep, Work, Food, Chores, Childcare, Fitness, Entertainmen
   - Keys <kbd>1</kbd>–<kbd>9</kbd> pick a category and <kbd>E</kbd> picks the eraser.
 - A side panel shows how many hours are placed and how close each area is to its target.
 
+### 4 · Salah (for Muslims)
+
+A page for planning your week around the five daily prayers:
+
+- **Prayer times for the whole week.** Pick a city or tap **Use my location**, and choose a calculation method and Asr school (Standard or Hanafi).
+  - Times are calculated on your device; no data is sent anywhere.
+  - Your local mosque's timetable may differ by a few minutes.
+- **Next prayer countdown** and today's times at a glance.
+- **Your worship week**, written as a story with draggable numbers: prayers, Quran, dhikr, Jumu'ah, learning and Tahajjud.
+  - Turn on **Count this in my 168 hours** to add it as a *Faith & prayer* area.
+  - On Fridays, Jumu'ah replaces Dhuhr, so that time isn't counted twice.
+- **Load an ideal Muslim week** in one tap.
+- **Build my prayer-centred schedule** creates a schedule with:
+  - sleep ending at Fajr;
+  - faith time at the prayer hours;
+  - gold prayer markers on the grid.
+
 ## Saving, exporting and resetting
 
 | Action | What it does |
@@ -58,7 +75,7 @@ The 8 life areas are Sleep, Work, Food, Chores, Childcare, Fitness, Entertainmen
 
 Everything about the people is in **[`people.js`](people.js)**: name, role, avatar colour, a one-line note and their weekly hours per area. Edit the numbers or add a new entry and the Compare view and leaderboard update automatically.
 
-Avatars show initials by default. To show a photo, set `photo` to an image URL **you have the right to publish**, for example a Wikimedia Commons file, and put the attribution in `credit`.
+Photos are freely licensed images from **Wikimedia Commons** (public domain, CC BY or CC BY-SA), cropped and resized into [`img/people/`](img/people/). The photographer and licence for each one are listed under **Photo credits** on the Compare page and in `people.js`. To add or change a photo, set `photo` to an image **you have the right to publish**, and fill in `credit` and `creditUrl`. If there's no photo, the avatar shows initials.
 
 ## How the numbers are calculated
 
@@ -97,6 +114,7 @@ index.html   page structure
 styles.css   design tokens, light/dark themes, responsive layout
 app.js       calculation engine, story editor, ring, receipt, compare, schedule, export
 people.js    the people you can compare with (easy to edit)
+img/people/  their avatar photos (Wikimedia Commons, see credits)
 ```
 
 ## License

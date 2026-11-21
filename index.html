@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=7" />
   <script>
     try {
       var s = JSON.parse(localStorage.getItem('168h-planner:v1') || '{}');
@@ -36,6 +36,7 @@
         <button class="tab" role="tab" aria-controls="view-calc" data-view="calc"><span class="step">1</span>Balance</button>
         <button class="tab" role="tab" aria-controls="view-compare" data-view="compare"><span class="step">2</span>Compare</button>
         <button class="tab" role="tab" aria-controls="view-grid" data-view="grid"><span class="step">3</span>Schedule</button>
+        <button class="tab salah-tab" role="tab" aria-controls="view-salah" data-view="salah"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5A8.5 8.5 0 1 0 20.5 16 7 7 0 0 1 15.5 3.5Z"/></svg>Salah</button>
       </nav>
 
       <div class="actions">
@@ -151,6 +152,7 @@
         </div>
         <div class="lb-you" id="lb-you"></div>
         <ol class="lb-list" id="lb"></ol>
+        <details class="credits"><summary>Photo credits</summary><ul id="credits"></ul><p>Photos from Wikimedia Commons, cropped and resized. Licences as listed; CC BY-SA photos are shared under the same licence.</p></details>
         <p class="fine">Famous people’s weeks are rough estimates based on what they’ve said in interviews and on public reports. They’re here for fun and inspiration, not as facts, and they don’t imply any endorsement.</p>
       </div>
     </section>
@@ -190,6 +192,62 @@
           </div>
           <ul class="tally" id="tally"></ul>
         </aside>
+      </div>
+    </section>
+
+    <!-- ============ SALAH ============ -->
+    <section id="view-salah" class="view" role="tabpanel" hidden>
+      <div class="salah-hero">
+        <div class="intro small">
+          <p class="eyebrow"><span class="pulse gold"></span>For Muslims</p>
+          <h1>Plan your week <span class="soft">around Salah.</span></h1>
+          <p class="lede">Let the five daily prayers anchor your days. See this week’s prayer times, plan your Quran, dhikr and learning, then build a schedule where everything else fits around them.</p>
+        </div>
+        <div class="card next-prayer" id="next-prayer" aria-live="polite"></div>
+      </div>
+
+      <div class="card salah-loc">
+        <label class="fieldset"><span>City</span><select id="salah-city"></select></label>
+        <button class="btn" id="salah-locate" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="7.5"/></svg>
+          Use my location
+        </button>
+        <label class="fieldset"><span>Calculation</span><select id="salah-method"></select></label>
+        <label class="fieldset"><span>Asr</span><select id="salah-asr"><option value="standard">Standard (Shafi‘i, Maliki, Hanbali)</option><option value="hanafi">Hanafi</option></select></label>
+      </div>
+
+      <div class="salah-grid">
+        <div class="card week-times">
+          <div class="wt-head"><h2>This week’s prayer times</h2><p class="muted" id="salah-meta"></p></div>
+          <div class="table-scroll"><table class="pt" id="prayer-week"></table></div>
+          <p class="fine"><b>J</b> = Jumu’ah on Friday. Calculated on your device using astronomical formulas. Your local mosque’s timetable may differ by a few minutes, so follow it where available.</p>
+        </div>
+
+        <div class="faith-col">
+          <div class="faith-top">
+            <h2>Your worship week</h2>
+            <div class="seg" id="faith-mode" role="radiogroup" aria-label="Which week">
+              <button data-mode="current" role="radio">Now</button>
+              <button data-mode="ideal" role="radio">Ideal</button>
+            </div>
+          </div>
+          <article class="story faith" id="faith-card"></article>
+          <p class="faith-summary" id="faith-summary"></p>
+          <label class="switch"><input type="checkbox" id="salah-sync" /><span class="track"></span><span>Count this in my 168 hours <small>(adds a “Faith &amp; prayer” area)</small></span></label>
+          <label class="switch"><input type="checkbox" id="salah-markers" /><span class="track"></span><span>Show prayer times on my schedule</span></label>
+          <div class="salah-actions">
+            <button class="btn" id="btn-muslim-week" type="button">Load an ideal Muslim week</button>
+            <button class="btn primary" id="btn-prayer-schedule" type="button">Build my prayer-centred schedule <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="habits-title">Habits that make it easier</h2>
+      <div class="habits">
+        <div class="habit"><span class="h-ico">🌙</span><b>Sleep after Isha</b><p>An early night makes Fajr, and Tahajjud if you pray it, far easier. Plan your wind-down right after Isha.</p></div>
+        <div class="habit"><span class="h-ico">🌅</span><b>Anchor mornings on Fajr</b><p>Use the quiet after Fajr for Quran, dhikr or deep work, before the day gets busy.</p></div>
+        <div class="habit"><span class="h-ico">☀️</span><b>A short midday rest</b><p>A brief qaylulah nap around Dhuhr can recharge you for the afternoon.</p></div>
+        <div class="habit"><span class="h-ico">🕌</span><b>Keep Friday midday free</b><p>Block time for Jumu’ah, the khutbah and travel so nothing gets booked over it.</p></div>
       </div>
     </section>
   </main>
@@ -240,7 +298,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="people.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="people.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
