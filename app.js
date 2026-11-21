@@ -14,17 +14,19 @@
 
   /* ---------- Life areas (order = spreadsheet order) ---------- */
   const BUILTINS = [
-    { id: 'sleep', emoji: '😴', name: 'Sleep', color: '#7c83db' },
-    { id: 'work', emoji: '💻', name: 'Work', color: '#3e8ed0' },
-    { id: 'food', emoji: '🍕', name: 'Food', color: '#e0904a' },
-    { id: 'chores', emoji: '🧹', name: 'Chores', color: '#b08d57' },
-    { id: 'childcare', emoji: '👶', name: 'Childcare', color: '#de7a9c' },
-    { id: 'fitness', emoji: '🏋️', name: 'Fitness', color: '#4fae7b' },
-    { id: 'entertainment', emoji: '📺', name: 'Entertainment', color: '#9b6fd0' },
-    { id: 'relationships', emoji: '🥰', name: 'Relationships', color: '#e06a5f' },
+    { id: 'sleep', emoji: '😴', name: 'Sleep', color: '#a9b4f2' },
+    { id: 'work', emoji: '💻', name: 'Work', color: '#93c3e6' },
+    { id: 'food', emoji: '🍕', name: 'Food', color: '#f4c48f' },
+    { id: 'chores', emoji: '🧹', name: 'Chores', color: '#a6d6c4' },
+    { id: 'childcare', emoji: '👶', name: 'Childcare', color: '#f1b3c8' },
+    { id: 'fitness', emoji: '🏋️', name: 'Fitness', color: '#b6d89e' },
+    { id: 'entertainment', emoji: '📺', name: 'Entertainment', color: '#c8b4ea' },
+    { id: 'relationships', emoji: '🥰', name: 'Relationships', color: '#f0a99c' },
   ];
   const BUILTIN_IDS = BUILTINS.map((b) => b.id);
-  const CUSTOM_COLORS = ['#3bb0a8', '#c9a93a', '#6e8ca0', '#c2577a', '#5a9e3e', '#8c7ae6', '#d0743c'];
+  const CUSTOM_COLORS = ['#e6d38c', '#9fd2d8', '#d8b8a0', '#b9c5d8', '#e2b5de', '#c4d98f', '#f2bfa0'];
+  // Earlier default colours, upgraded automatically to the soft palette.
+  const OLD_DEFAULTS = {"sleep": "#7c83db", "work": "#3e8ed0", "food": "#e0904a", "chores": "#b08d57", "childcare": "#de7a9c", "fitness": "#4fae7b", "entertainment": "#9b6fd0", "relationships": "#e06a5f"};
 
   /*
    * Each section mirrors one block of the sheet.
@@ -260,7 +262,7 @@
           builtin: true,
           name: typeof c.name === 'string' && c.name.trim() ? c.name.slice(0, 40) : b.name,
           emoji: typeof c.emoji === 'string' ? c.emoji.slice(0, 8) : b.emoji,
-          color: /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : b.color,
+          color: /^#[0-9a-f]{6}$/i.test(c.color) && c.color.toLowerCase() !== OLD_DEFAULTS[b.id] ? c.color : b.color,
         };
       });
       for (const c of raw.cats) {
@@ -358,14 +360,10 @@
       const sec = SECTIONS[id];
       const card = el('article', { class: 'card section', style: `--c:${c.color}`, id: 'sec-' + id });
       const head = el('header', { class: 'sec-head' },
-        `<span class="sec-emoji">${esc(c.emoji)}</span><h3>${esc(c.name)}</h3>`);
+        `<span class="sec-dot"></span><h3>${esc(c.name)}</h3>`);
       const tot = el('div', { class: 'sec-tot' });
-      const d = el('span', { class: 'delta', title: 'Ideal vs current (hours / week)' });
-      bindOut(d, () => {
-        const n = R.ideal.areas[id].total - R.current.areas[id].total;
-        d.className = 'delta ' + deltaClass(n);
-        return fmtDelta(n) + ' h';
-      });
+      const d = el('span', { class: 'sec-sum', title: 'Current → ideal (hours / week)' });
+      bindOut(d, () => `${fmt(R.current.areas[id].total)} → ${fmt(R.ideal.areas[id].total)} h`);
       tot.append(d);
       head.append(tot);
       card.append(head);
@@ -398,8 +396,8 @@
     }
 
     // Custom life areas
-    const card = el('article', { class: 'card section', style: '--c:#8c8a84', id: 'sec-custom' });
-    card.append(el('header', { class: 'sec-head' }, '<span class="sec-emoji">✨</span><h3>Your own life areas</h3>'));
+    const card = el('article', { class: 'card section', style: '--c:var(--faint)', id: 'sec-custom' });
+    card.append(el('header', { class: 'sec-head' }, '<span class="sec-dot"></span><h3>Your own areas</h3>'));
     const body = el('div', { class: 'q-grid' });
     const list = customs();
     if (!list.length) {
@@ -409,7 +407,7 @@
       for (const c of list) {
         const row = el('div', { class: 'row custom-row' });
         row.append(el('label', { class: 'q-label', for: `in-current-${c.id}` },
-          `<span class="swatch" style="background:${c.color}"></span><span>${esc(c.emoji)} ${esc(c.name)} <span class="gap">·</span> <span class="muted">hours per week</span></span>`));
+          `<span class="swatch" style="background:${c.color}"></span><span>${esc(c.name)} <span class="muted">· hours per week</span></span>`));
         for (const w of WEEKS) row.append(makeCustomField(w, c));
         body.append(row);
       }
@@ -421,7 +419,7 @@
     if (list.length) {
       const foot = el('div', { class: 'sec-foot' });
       const tRow = el('div', { class: 'row total' });
-      tRow.append(el('span', { class: 'q-label' }, '✨ In total, that’s <span class="muted" style="font-weight:400">hours per week on your own areas.</span>'));
+      tRow.append(el('span', { class: 'q-label' }, 'Total <span class="muted">· hours per week</span>'));
       for (const w of WEEKS) {
         const o = el('span', { class: 'out' });
         bindOut(o, () => fmt(sum(list.map((c) => R[w].areas[c.id].total))));
@@ -438,7 +436,7 @@
     const foot = el('div', { class: 'sec-foot' });
     const tRow = el('div', { class: 'row total' });
     tRow.append(el('span', { class: 'q-label' },
-      `${esc(c.emoji)} In total, I spend <span class="muted" style="font-weight:400">${esc(totalLabel)}</span>`));
+      `Total <span class="muted">· ${esc(totalLabel.replace(/\.$/, ''))}</span>`));
     for (const w of WEEKS) {
       const o = el('span', { class: 'out' });
       bindOut(o, () => fmt(R[w].areas[id].total));
@@ -451,7 +449,7 @@
   function leftRow(id, isLast) {
     const row = el('div', { class: 'row left' });
     row.append(el('span', { class: 'q-label' },
-      `✅ That leaves me with … ${isLast ? 'hours per week of free time.' : 'hours per week for everything else.'}`));
+      `${isLast ? 'Free time left' : 'Hours left for everything else'}`));
     for (const w of WEEKS) {
       const o = el('span', { class: 'out' });
       bindOut(o, () => {
@@ -500,31 +498,26 @@
       const r = R[w];
       const isCur = w === 'current';
       const neg = (n) => (round1(n) < 0 ? ' neg' : '');
+      const over = round1(r.free) < 0;
+      const pct = Math.min(100, (r.used / HOURS) * 100);
       return `
       <div class="card sum-card ${isCur ? 'cur' : 'ide'}">
         <div class="sum-top">
-          <span class="sum-title">${isCur ? '👉 Current week' : '🌈 Ideal week'}</span>
-          <span class="sum-sub">${isCur ? 'How I spend my 168 hours now' : 'How I’d ideally spend them'}</span>
+          <span class="sum-title"><i></i>${isCur ? 'Current week' : 'Ideal week'}</span>
+          <span class="sum-sub">${over ? `<span class="neg">Over by ${fmt(-r.free)} h</span>` : `${fmt(r.used)} of 168 h committed`}</span>
         </div>
-        <div class="stat-row">
-          <div><div class="stat-big${neg(r.free)}">${fmt(r.free)}<small>h</small></div><div class="stat-label">⏳ hours free / week</div></div>
-          <div><div class="stat-big">${fmt(r.used)}<small>h</small></div><div class="stat-label">⌛️ hours used / week</div></div>
-        </div>
+        <div class="stat-big${neg(r.free)}">${fmt(r.free)}<small>free hours / week</small></div>
+        <div class="sum-meter${over ? ' over' : ''}"><span style="width:${pct}%"></span></div>
         <table class="mini">
-          <thead><tr><th></th><th>💭 Weekly</th><th>🗓️ Monthly</th><th>🎊 Annually</th></tr></thead>
+          <thead><tr><th></th><th>Week</th><th>Month</th><th>Year</th></tr></thead>
           <tbody>
-            <tr><td>⌛️ Hours used</td><td>${fmt(r.used)}</td><td>${fmt(r.monthly.used)}</td><td>${fmt(r.annual.used)}</td></tr>
-            <tr><td>⏳ Hours free</td><td class="${neg(r.free)}">${fmt(r.free)}</td><td class="${neg(r.free)}">${fmt(r.monthly.free)}</td><td class="${neg(r.free)}">${fmt(r.annual.free)}</td></tr>
+            <tr><td>Committed</td><td>${fmt(r.used)}</td><td>${fmt(r.monthly.used)}</td><td>${fmt(r.annual.used)}</td></tr>
+            <tr><td>Free</td><td class="${neg(r.free)}">${fmt(r.free)}</td><td class="${neg(r.free)}">${fmt(r.monthly.free)}</td><td class="${neg(r.free)}">${fmt(r.annual.free)}</td></tr>
           </tbody>
         </table>
       </div>`;
     };
     $('#summary').innerHTML = card('current') + card('ideal');
-
-    // warnings
-    const warns = WEEKS.filter((w) => round1(R[w].free) < 0).map((w) =>
-      `<div class="warn"><span>⚠️</span><span>Your <strong>${w === 'current' ? 'current' : 'ideal'} week</strong> adds up to ${fmt(R[w].used)} hours — that’s ${fmt(-R[w].free)} more than the 168 a week has.</span></div>`);
-    $('#warnings').innerHTML = warns.join('');
 
     // bars
     const allCats = state.cats;
@@ -540,23 +533,21 @@
       `<div class="bar-row ticks-row"><span></span><div class="ticks">${[0, 24, 48, 72, 96, 120, 144, 168].map((t) => `<span style="left:${(t / HOURS) * 100}%">${t}h</span>`).join('')}</div></div>`;
 
     renderDots();
-    $('#bars-legend').innerHTML = allCats.map((c) => `<span><i style="background:${c.color}"></i>${esc(c.name)}</span>`).join('') +
-      '<span><i style="background:var(--surface-2);outline:1px solid var(--border-strong)"></i>Free</span>';
 
     // comparison table (mirrors G6:H16 / P6:R16)
     const rows = allCats.map((c) => {
       const a = R.current.areas[c.id].total;
       const b = R.ideal.areas[c.id].total;
-      return `<tr><td><span class="dot" style="background:${c.color}"></span>${esc(c.emoji)} ${esc(c.name)}</td><td>${fmt(a)}</td><td>${fmt(b)}</td><td><span class="delta ${deltaClass(b - a)}">${fmtDelta(b - a)}</span></td></tr>`;
+      return `<tr><td><span class="dot" style="background:${c.color}"></span>${esc(c.name)}</td><td>${fmt(a)}</td><td>${fmt(b)}</td><td><span class="delta ${deltaClass(b - a)}">${fmtDelta(b - a)}</span></td></tr>`;
     }).join('');
     const fc = R.current.free;
     const fi = R.ideal.free;
     const negc = (n) => (round1(n) < 0 ? 'neg' : '');
     $('#cmp').innerHTML = `
-      <thead><tr><th>Life area</th><th class="cur">Current h</th><th class="ide">Ideal h</th><th>vs current</th></tr></thead>
+      <thead><tr><th>Area</th><th class="cur">Current</th><th class="ide">Ideal</th><th>Change</th></tr></thead>
       <tbody>${rows}
-        <tr class="free"><td>✅ Free Time</td><td class="${negc(fc)}">${fmt(fc)}</td><td class="${negc(fi)}">${fmt(fi)}</td><td><span class="delta ${deltaClass(fi - fc)}">${fmtDelta(fi - fc)}</span></td></tr>
-        <tr class="total"><td>❌ Total Non-Free Time</td><td>${fmt(R.current.used)}</td><td>${fmt(R.ideal.used)}</td><td><span class="delta ${deltaClass(R.ideal.used - R.current.used)}">${fmtDelta(R.ideal.used - R.current.used)}</span></td></tr>
+        <tr class="free"><td>Free time</td><td class="${negc(fc)}">${fmt(fc)}</td><td class="${negc(fi)}">${fmt(fi)}</td><td><span class="delta ${deltaClass(fi - fc)}">${fmtDelta(fi - fc)}</span></td></tr>
+        <tr class="total"><td>Total committed</td><td>${fmt(R.current.used)}</td><td>${fmt(R.ideal.used)}</td><td><span class="delta ${deltaClass(R.ideal.used - R.current.used)}">${fmtDelta(R.ideal.used - R.current.used)}</span></td></tr>
       </tbody>`;
   }
 
@@ -702,7 +693,7 @@
       c.title = `${DAYS[d]} ${hourLabel(h)}–${hourLabel(nextH)} · ${k ? k.name : 'Free'}`;
       // Calendar-style label at the start of each block.
       const starts = !!k && !(h > 0 && state.grid[i - 1] === id);
-      c.textContent = starts ? (k.emoji ? k.emoji + ' ' : '') + k.name : '';
+      c.textContent = starts ? k.name : '';
     }
     markNow();
   }
@@ -722,7 +713,7 @@
     p.innerHTML = '';
     state.cats.forEach((c, n) => {
       const b = el('button', { class: 'chip', type: 'button', role: 'radio', style: `--c:${c.color}`, 'aria-checked': String(state.brush === c.id) },
-        `<span class="sw"></span>${esc(c.emoji)} ${esc(c.name)}${n < 9 ? `<span class="k">${n + 1}</span>` : ''}`);
+        `<span class="sw"></span>${esc(c.name)}${n < 9 ? `<span class="k">${n + 1}</span>` : ''}`);
       b.addEventListener('click', () => setBrush(c.id));
       p.append(b);
     });
@@ -764,8 +755,8 @@
       return `<li style="--c:${color}"><div class="t-top"><span class="sw"></span><span class="n">${name}</span><span class="v">${have}<small> / ${fmt(want)} h</small></span></div>
         <div class="t-bar"><span style="width:${pct}%"></span></div><div class="t-note ${cls}">${note}</div></li>`;
     };
-    $('#tally').innerHTML = state.cats.map((c) => item(c.color, `${esc(c.emoji)} ${esc(c.name)}`, counts[c.id] || 0, T.areas[c.id].total)).join('') +
-      item('var(--border-strong)', '✅ Free time', remaining, Math.max(0, T.free));
+    $('#tally').innerHTML = state.cats.map((c) => item(c.color, esc(c.name), counts[c.id] || 0, T.areas[c.id].total)).join('') +
+      item('var(--border-strong)', 'Free time', remaining, Math.max(0, T.free));
   }
 
   /* ---------- Views ---------- */
@@ -791,7 +782,7 @@
   function addCategory() {
     const used = new Set(state.cats.map((c) => c.color));
     const color = CUSTOM_COLORS.find((c) => !used.has(c)) || CUSTOM_COLORS[customs().length % CUSTOM_COLORS.length];
-    state.cats.push({ id: uid(), builtin: false, name: 'New area', emoji: '✨', color, current: 0, ideal: 0 });
+    state.cats.push({ id: uid(), builtin: false, name: 'New area', emoji: '', color, current: 0, ideal: 0 });
     renderAll();
   }
 
@@ -802,15 +793,13 @@
       const li = el('li');
       const col = el('input', { type: 'color', value: c.color, 'aria-label': `${c.name} colour` });
       col.addEventListener('input', () => { c.color = col.value; renderAll(false); });
-      const emo = el('input', { type: 'text', class: 'emoji', value: c.emoji, maxlength: '8', 'aria-label': `${c.name} emoji` });
-      emo.addEventListener('input', () => { c.emoji = emo.value; renderAll(false); });
       const name = el('input', { type: 'text', value: c.name, maxlength: '40', 'aria-label': 'Category name' });
       name.addEventListener('input', () => { c.name = name.value || (c.builtin ? BUILTINS.find((b) => b.id === c.id).name : 'Untitled'); renderAll(false); });
-      li.append(col, emo, name);
+      li.append(col, name);
       if (c.builtin) {
-        li.append(el('span', { class: 'lock', title: 'Built-in areas are driven by the spreadsheet formulas and can’t be deleted' }, '🔒'));
+        li.append(el('span', { class: 'lock', title: 'Built-in areas use the calculator formulas and can’t be deleted' }, 'Built-in'));
       } else {
-        const del = el('button', { class: 'btn icon', type: 'button', 'aria-label': `Delete ${c.name}`, title: 'Delete' }, '🗑');
+        const del = el('button', { class: 'btn icon', type: 'button', 'aria-label': `Delete ${c.name}`, title: 'Delete' }, '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg>');
         del.addEventListener('click', () => {
           state.cats = state.cats.filter((x) => x !== c);
           state.grid = state.grid.map((g) => (g === c.id ? null : g));
@@ -822,7 +811,7 @@
       ul.append(li);
     }
     if (focusLast) {
-      const inputs = ul.querySelectorAll('input[type="text"]:not(.emoji)');
+      const inputs = ul.querySelectorAll('input[type="text"]');
       const last = inputs[inputs.length - 1];
       if (last) { last.focus(); last.select(); }
     }
