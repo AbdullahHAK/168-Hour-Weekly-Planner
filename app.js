@@ -640,7 +640,21 @@
       if (!painting) return;
       const t = document.elementFromPoint(e.clientX, e.clientY);
       const c = t && t.closest && t.closest('.cell');
-      if (c) applyCell(+c.dataset.i);
+      if (!c) return;
+      const to = +c.dataset.i;
+      const from = lastPainted;
+      // Fill any cells skipped by a fast stroke (straight line in day/hour space).
+      if (from >= 0 && from !== to) {
+        const [d0, h0, d1, h1] = [Math.floor(from / 24), from % 24, Math.floor(to / 24), to % 24];
+        const steps = Math.max(Math.abs(d1 - d0), Math.abs(h1 - h0));
+        for (let s = 1; s < steps; s++) {
+          const d = Math.round(d0 + ((d1 - d0) * s) / steps);
+          const h = Math.round(h0 + ((h1 - h0) * s) / steps);
+          lastPainted = -1;
+          applyCell(d * 24 + h);
+        }
+      }
+      applyCell(to);
     });
     const stop = () => { if (painting) { painting = false; save(); } };
     window.addEventListener('pointerup', stop);
