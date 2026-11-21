@@ -278,6 +278,7 @@
       cmpId: 'musk',
       cmpMode: 'current',
       lbMetric: 'balance',
+      profile: { name: '', photo: '' },
       salah: { place: 'makkah', lat: 21.4225, lng: 39.8262, zone: 'Asia/Riyadh', method: 'Makkah', asr: 'standard', sync: false, markers: false,
         current: { prayers: 5, prayerMins: 10, quranMins: 5, dhikrMins: 5, jumuahMins: 60, learnHours: 0, tahajjudNights: 0, tahajjudMins: 0 },
         ideal: { prayers: 5, prayerMins: 15, quranMins: 20, dhikrMins: 10, jumuahMins: 90, learnHours: 2, tahajjudNights: 2, tahajjudMins: 20 } },
@@ -292,6 +293,11 @@
     if (raw.mode === 'current' || raw.mode === 'ideal') s.mode = raw.mode;
     if (raw.target === 'current' || raw.target === 'ideal') s.target = raw.target;
     if (raw.view === 'compare' || raw.view === 'salah') s.view = raw.view;
+    if (raw.profile && typeof raw.profile === 'object') {
+      if (typeof raw.profile.name === 'string') s.profile.name = raw.profile.name.replace(/[\u0000-\u001f]/g, '').slice(0, 40);
+      const ph = raw.profile.photo;
+      if (typeof ph === 'string' && ph.length < 400000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(ph)) s.profile.photo = ph;
+    }
     if (raw.salah && typeof raw.salah === 'object') {
       const r = raw.salah;
       const S = s.salah;
@@ -706,7 +712,7 @@
     $('#receipt').innerHTML = `
       <div class="r-top">
         <div class="r-brand">168 HOURS</div>
-        <div class="r-meta">${WEEK_NAME[w].toUpperCase()} · ${date}</div>
+        <div class="r-meta">${state.profile.name.trim() ? esc(state.profile.name.trim().toUpperCase()) + ' · ' : ''}${WEEK_NAME[w].toUpperCase()} · ${date}</div>
       </div>
       <ul class="r-lines">${lines}</ul>
       <div class="r-rule"></div>
@@ -1065,7 +1071,13 @@
     return `<span class="av ${cls}" style="--c:${esc(p.color || '#b9c5d8')}">${inner}</span>`;
   }
   const YOU = { id: 'you', name: 'You', color: 'var(--ide)' };
-  function youAvatar(cls = '') { return `<span class="av you ${cls}"><span>You</span></span>`; }
+  const myName = () => (state.profile && state.profile.name.trim()) || 'You';
+  function youAvatar(cls = '') {
+    const pr = state.profile || {};
+    if (pr.photo) return `<span class="av you photo ${cls}"><img src="${pr.photo}" alt="" /></span>`;
+    const label = pr.name.trim() ? initials(pr.name.trim()) : 'You';
+    return `<span class="av you ${cls}"><span>${esc(label)}</span></span>`;
+  }
 
   function currentPerson() {
     return PEOPLE.find((p) => p.id === state.cmpId) || PEOPLE[0];
@@ -1092,6 +1104,8 @@
     $('#vs-ring-you').innerHTML = ringSVG(state.cmpMode, 150, 16) + center(me, 'h free') + youAvatar('mini');
     $('#vs-ring-them').innerHTML = ringFrom((id) => them[id] || 0, 150, 16) + center(them, 'h free') + avatar(p, 'mini');
     $('#vs-name').textContent = p.name;
+    const yn = document.querySelector('.vs-side.you .vs-name');
+    if (yn) yn.textContent = myName();
     $('#vs-role').textContent = p.role || '';
 
     // Top three differences, in plain words.
@@ -1137,8 +1151,8 @@
       `<button type="button" role="tab" data-metric="${k}" aria-selected="${k === metric}">${m.label}</button>`).join('');
     $('#lb-desc').textContent = M.desc;
     const rows = PEOPLE.map((p) => ({ p, v: M.get(personWeek(p)), me: false }));
-    rows.push({ p: { ...YOU, name: 'You · now', role: 'My week now' }, v: M.get(youWeek('current')), me: 'current' });
-    rows.push({ p: { ...YOU, name: 'You · ideal', role: 'My ideal week' }, v: M.get(youWeek('ideal')), me: 'ideal' });
+    rows.push({ p: { ...YOU, name: `${myName()} · now`, role: 'My week now' }, v: M.get(youWeek('current')), me: 'current' });
+    rows.push({ p: { ...YOU, name: `${myName()} · ideal`, role: 'My ideal week' }, v: M.get(youWeek('ideal')), me: 'ideal' });
     rows.sort((a, b) => b.v - a.v);
     const max = Math.max(1, ...rows.map((r) => r.v));
     $('#lb').innerHTML = rows.map((r, i) => `
@@ -1485,6 +1499,64 @@
     toast('Built around your prayers. Paint to fine-tune.', 'Undo', () => { state.grid = snap; paintCells(); renderTally(); save(); });
   }
 
+
+  /* ==========================================================
+     PROFILE — name + photo, stored only in this browser
+     ========================================================== */
+  function greeting() {
+    const h = new Date().getHours();
+    return h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  }
+  function renderProfile() {
+    const pr = state.profile;
+    const btn = $('#btn-profile');
+    if (btn) {
+      btn.innerHTML = youAvatar('tiny');
+      btn.title = pr.name.trim() ? `${pr.name.trim()} · your profile` : 'Set up your profile';
+    }
+    const hello = $('#hello');
+    if (hello) hello.textContent = pr.name.trim() ? `${greeting()}, ${pr.name.trim().split(/\s+/)[0]}. Your week is a budget of time` : 'Your week is a budget of time';
+    const av = $('#pf-av');
+    if (av) av.innerHTML = youAvatar('big');
+    const rm = $('#pf-remove');
+    if (rm) rm.hidden = !pr.photo;
+  }
+  function openProfile() {
+    $('#pf-name').value = state.profile.name;
+    renderProfile();
+    const d = $('#dlg-profile');
+    if (!d.open) d.showModal();
+    if (!state.profile.name) setTimeout(() => $('#pf-name').focus(), 50);
+  }
+  // Read an image file, centre-crop it to a square and shrink it to 256 px JPEG.
+  function processPhoto(file) {
+    if (!file || !/^image\//.test(file.type)) { toast('Please choose an image file'); return; }
+    if (file.size > 15 * 1024 * 1024) { toast('That image is too large (max 15 MB)'); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - s) / 2;
+      const sy = Math.max(0, (img.naturalHeight - s) * 0.3); // portraits: favour the top (faces)
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 256;
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, s, s, 0, 0, 256, 256);
+      URL.revokeObjectURL(url);
+      let data = cv.toDataURL('image/jpeg', 0.85);
+      if (data.length > 380000) data = cv.toDataURL('image/jpeg', 0.6);
+      state.profile.photo = data;
+      renderProfile();
+      renderCompare();
+      renderReceipt();
+      save();
+      toast('Photo saved on this device');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('Couldn’t read that image'); };
+    img.src = url;
+  }
+
   /* ---------- Views & theme ---------- */
   function setView(v) {
     state.view = v;
@@ -1627,6 +1699,7 @@
 
   /* ---------- Wiring ---------- */
   function renderAll(rebuildCatList = true) {
+    renderProfile();
     renderPeople();
     renderCards();
     renderSalahCard();
@@ -1669,6 +1742,15 @@
       renderLeaderboard();
       save();
     });
+    on('#btn-profile', 'click', openProfile);
+    on('#pf-upload', 'click', () => $('#pf-file').click());
+    on('#pf-file', 'change', (e) => { processPhoto(e.target.files[0]); e.target.value = ''; });
+    on('#pf-remove', 'click', () => { state.profile.photo = ''; renderProfile(); renderCompare(); save(); toast('Photo removed'); });
+    on('#pf-name', 'input', (e) => { state.profile.name = e.target.value.slice(0, 40); renderProfile(); renderCompare(); renderReceipt(); save(); });
+    on('#profile-form', 'submit', () => { state.profile.name = state.profile.name.trim(); renderProfile(); save(); });
+    on('#pf-drop', 'dragover', (e) => { e.preventDefault(); e.currentTarget.classList.add('drag'); });
+    on('#pf-drop', 'dragleave', (e) => e.currentTarget.classList.remove('drag'));
+    on('#pf-drop', 'drop', (e) => { e.preventDefault(); e.currentTarget.classList.remove('drag'); processPhoto(e.dataTransfer.files[0]); });
     on('#salah-city', 'change', (e) => { if (e.target.value === 'custom') useMyLocation(); else setPlace(e.target.value); });
     on('#salah-locate', 'click', useMyLocation);
     on('#salah-method', 'change', (e) => { state.salah.method = e.target.value; renderSalah(); paintCells(); save(); });

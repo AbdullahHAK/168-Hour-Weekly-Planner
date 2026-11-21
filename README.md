@@ -59,6 +59,15 @@ A page for planning your week around the five daily prayers:
   - faith time at the prayer hours;
   - gold prayer markers on the grid.
 
+### Your profile
+
+Tap the round avatar in the top bar to set your **name** and **profile photo**. Your photo is cropped and resized on your device, and both are stored only in your browser. They show up in:
+
+- the greeting;
+- your weekly receipt;
+- the "you vs them" comparison;
+- your rows on the leaderboard.
+
 ## Saving, exporting and resetting
 
 | Action | What it does |
