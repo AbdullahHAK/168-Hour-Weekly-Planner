@@ -1,0 +1,23 @@
+# Excel / Office temporary lock files
+~$*.xlsx
+~$*.xls
+~$*.xlsm
+~$*.docx
+*.tmp
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Node (if tooling is ever added)
+node_modules/
+
+# Spreadsheet template is kept private (not published)
+*.xlsx
+*.xls
