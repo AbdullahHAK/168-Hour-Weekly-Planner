@@ -125,7 +125,7 @@ window.PEOPLE = [
     name: 'Arnold Schwarzenegger',
     role: 'Actor · Former Governor',
     color: '#e6d38c',
-    photo: '',
+    photo: 'img/people/arnold.jpg',
     credit: '',
     note: 'Famously sleeps about 6 hours (“sleep faster”) and trains every day.',
     hours: { sleep: 42, work: 50, food: 8, chores: 1, childcare: 0, fitness: 9, entertainment: 5, relationships: 6 },
