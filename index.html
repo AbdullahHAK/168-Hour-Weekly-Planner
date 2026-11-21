@@ -4,16 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>168 Hours Planner</title>
-  <meta name="description" content="168 hours a week. See where they go now, and design where you want them to go. A simple weekly time planner." />
+  <meta name="description" content="168 hours a week. Balance them like a budget, compare your week with famous high-achievers, and turn it into a schedule in one tap." />
   <meta name="theme-color" content="#fbfaf8" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23222'/><circle cx='16' cy='16' r='8.5' fill='none' stroke='%23a9b4f2' stroke-width='3.4' stroke-dasharray='40 60' transform='rotate(-90 16 16)'/><circle cx='16' cy='16' r='8.5' fill='none' stroke='%23f4c48f' stroke-width='3.4' stroke-dasharray='0 40 13 60' transform='rotate(-90 16 16)'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script>
-    // Apply saved theme before paint to avoid a flash.
     try {
       var s = JSON.parse(localStorage.getItem('168h-planner:v1') || '{}');
       if (s.theme === 'light' || s.theme === 'dark') document.documentElement.dataset.theme = s.theme;
@@ -34,8 +33,9 @@
       </a>
 
       <nav class="tabs" role="tablist" aria-label="Views">
-        <button class="tab" role="tab" id="tab-calc" aria-controls="view-calc" data-view="calc">Calculator</button>
-        <button class="tab" role="tab" id="tab-grid" aria-controls="view-grid" data-view="grid">Week grid</button>
+        <button class="tab" role="tab" aria-controls="view-calc" data-view="calc"><span class="step">1</span>Balance</button>
+        <button class="tab" role="tab" aria-controls="view-compare" data-view="compare"><span class="step">2</span>Compare</button>
+        <button class="tab" role="tab" aria-controls="view-grid" data-view="grid"><span class="step">3</span>Schedule</button>
       </nav>
 
       <div class="actions">
@@ -70,62 +70,112 @@
   </header>
 
   <main>
-    <!-- ============ CALCULATOR VIEW ============ -->
-    <section id="view-calc" class="view" role="tabpanel" aria-labelledby="tab-calc">
+    <!-- ============ 1 · BALANCE ============ -->
+    <section id="view-calc" class="view" role="tabpanel">
       <div class="hero">
         <div class="intro">
-          <p class="eyebrow"><span class="pulse"></span>Weekly time planner</p>
+          <p class="eyebrow"><span class="pulse"></span>Your week is a budget of time</p>
           <h1>168 hours.<br /><span class="soft">Spend them on purpose.</span></h1>
-          <p class="lede">See where your week goes today, then design the week you actually want. Fill in your <span class="tag cur">Current</span> and <span class="tag ide">Ideal</span> week below. Everything updates as you type.</p>
+          <p class="lede">Read your week like a story. <b>Drag any number sideways</b> or tap it to change it. The ring updates as you go.</p>
+
+          <div class="mode" role="radiogroup" aria-label="Which week are you editing?" id="mode-seg">
+            <button data-mode="current" role="radio"><span class="m-dot"></span>My week now</button>
+            <button data-mode="ideal" role="radio"><span class="m-dot"></span>My ideal week</button>
+          </div>
+
+          <div class="presets" id="presets">
+            <span class="muted">Start from</span>
+            <button type="button" data-preset="office">Office 9–5</button>
+            <button type="button" data-preset="student">Student</button>
+            <button type="button" data-preset="parent">Parent</button>
+            <button type="button" data-preset="freelancer">Freelancer</button>
+            <button type="button" data-preset="blank">Blank</button>
+            <button type="button" id="copy-now" class="accent" hidden>Copy my week now</button>
+          </div>
         </div>
-        <figure class="card dots-card">
-          <figcaption class="dots-head">
-            <span>Your week, one dot per hour</span>
-            <div class="seg" id="dots-seg" role="radiogroup" aria-label="Show week">
-              <button data-week="current" role="radio">Current</button>
-              <button data-week="ideal" role="radio">Ideal</button>
-            </div>
-          </figcaption>
-          <div class="dots" id="dots" role="img"></div>
-          <p class="dots-foot" id="dots-foot"></p>
+
+        <figure class="ring-wrap">
+          <div class="ring" id="ring" role="img"></div>
+          <figcaption class="insight" id="insight"></figcaption>
         </figure>
       </div>
 
-      <div class="summary" id="summary"></div>
-
-      <div class="card compare">
-        <div class="card-head">
-          <h2>Where the week goes</h2>
-          <span class="muted small">Hours per week</span>
-        </div>
-        <div class="bars" id="bars"></div>
-        <div class="table-wrap">
-          <table class="cmp" id="cmp"></table>
-        </div>
+      <div class="board">
+        <div class="cards" id="cards"></div>
+        <aside class="side">
+          <div class="receipt" id="receipt"></div>
+          <button class="btn primary next" id="go-schedule" type="button">Turn this into a schedule <span aria-hidden="true">→</span></button>
+        </aside>
       </div>
-
-      <div class="section-title">
-        <h2>The details</h2>
-        <p class="muted">Answer what applies to you and leave the rest at zero.</p>
-      </div>
-      <div class="sections" id="sections"></div>
     </section>
 
-    <!-- ============ GRID VIEW ============ -->
-    <section id="view-grid" class="view" role="tabpanel" aria-labelledby="tab-grid" hidden>
+    <!-- ============ 2 · COMPARE ============ -->
+    <section id="view-compare" class="view" role="tabpanel" hidden>
+      <div class="intro small">
+        <p class="eyebrow"><span class="pulse"></span>You vs. the greats</p>
+        <h1>How does your week <span class="soft">stack up?</span></h1>
+        <p class="lede">Pick someone and put your week next to theirs, then see where you land on the leaderboard.</p>
+      </div>
+
+      <div class="people" id="people" role="radiogroup" aria-label="Choose a person to compare with"></div>
+
+      <div class="vs-card card">
+        <div class="vs-top">
+          <div class="vs-side you">
+            <div class="vs-ring" id="vs-ring-you"></div>
+            <div class="vs-name">You</div>
+            <div class="seg" id="vs-mode" role="radiogroup" aria-label="Your week">
+              <button data-mode="current" role="radio">Now</button>
+              <button data-mode="ideal" role="radio">Ideal</button>
+            </div>
+          </div>
+          <div class="vs-badge">vs</div>
+          <div class="vs-side them">
+            <div class="vs-ring" id="vs-ring-them"></div>
+            <div class="vs-name" id="vs-name"></div>
+            <div class="vs-role" id="vs-role"></div>
+          </div>
+        </div>
+        <ul class="facts" id="facts"></ul>
+        <div class="fly" id="fly"></div>
+        <p class="vs-note" id="vs-note"></p>
+      </div>
+
+      <div class="lb card">
+        <div class="lb-head">
+          <div>
+            <h2>Leaderboard</h2>
+            <p class="muted" id="lb-desc"></p>
+          </div>
+          <div class="lb-tabs" id="lb-tabs" role="tablist" aria-label="Leaderboard metric"></div>
+        </div>
+        <div class="lb-you" id="lb-you"></div>
+        <ol class="lb-list" id="lb"></ol>
+        <p class="fine">Famous people’s weeks are rough estimates based on what they’ve said in interviews and on public reports. They’re here for fun and inspiration, not as facts, and they don’t imply any endorsement.</p>
+      </div>
+    </section>
+
+    <!-- ============ 3 · SCHEDULE ============ -->
+    <section id="view-grid" class="view" role="tabpanel" hidden>
       <div class="intro small">
         <p class="eyebrow"><span class="pulse"></span>Hour by hour</p>
         <h1>Paint your week.</h1>
-        <p class="lede">Pick a category, then click or drag across the grid. Drag over a block of the same colour to erase it. Click a day or an hour to fill the whole column or row.</p>
+        <p class="lede">Auto-fill a schedule from your plan in one tap, then fine-tune it. Pick a category and click or drag. Drag over the same colour to erase it.</p>
       </div>
 
       <div class="grid-layout">
         <div class="card grid-card">
+          <div class="grid-tools">
+            <button class="btn primary" id="btn-autofill" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3ZM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+              <span id="autofill-label">Auto-fill</span>
+            </button>
+            <button class="btn ghost" id="btn-clear-grid" type="button">Clear</button>
+          </div>
           <div class="palette" id="palette" role="radiogroup" aria-label="Brush"></div>
           <div class="week" id="week" aria-label="Weekly hour grid"></div>
           <div class="grid-foot">
-            <span class="hint"><kbd>1</kbd>–<kbd>9</kbd> choose a category · <kbd>E</kbd> eraser</span>
-            <button class="btn small ghost" id="btn-clear-grid">Clear grid</button>
+            <span class="hint"><kbd>1</kbd>–<kbd>9</kbd> choose a category · <kbd>E</kbd> eraser · click a day or hour to fill it</span>
           </div>
         </div>
 
@@ -134,7 +184,7 @@
           <div class="target-switch" role="radiogroup" aria-label="Compare against">
             <span>Targets from</span>
             <div class="seg" id="target-seg">
-              <button data-target="current" role="radio">Current</button>
+              <button data-target="current" role="radio">Now</button>
               <button data-target="ideal" role="radio">Ideal</button>
             </div>
           </div>
@@ -148,6 +198,12 @@
     <p>Saved privately in your browser. Nothing leaves your device. <span class="sep">·</span> <a href="https://github.com/AbdullahHAK/168-Hour-Weekly-Planner">Source</a></p>
   </footer>
 
+  <!-- Floating free-hours pill -->
+  <button class="pill" id="pill" type="button" aria-label="Hours free — scroll to the ring"></button>
+
+  <!-- Number editor popover -->
+  <div class="pop" id="pop" role="dialog" aria-label="Edit value" hidden></div>
+
   <!-- Categories dialog -->
   <dialog id="dlg-categories" class="dlg">
     <form method="dialog" class="dlg-body">
@@ -155,7 +211,7 @@
         <h2>Categories</h2>
         <button class="btn icon" value="close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </header>
-      <p class="muted">Rename or recolour any area, or add your own. Areas you add get an “hours per week” question in the calculator.</p>
+      <p class="muted">Rename or recolour any area, or add your own. Areas you add get their own card with an “hours a week” number.</p>
       <ul class="cat-list" id="cat-list"></ul>
       <div class="dlg-actions">
         <button type="button" class="btn" id="btn-add-cat">Add category</button>
@@ -172,9 +228,9 @@
         <button class="btn icon" value="cancel" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </header>
       <p class="muted">Choose what to reset. This can’t be undone, so export a JSON backup first if you want to keep your plan.</p>
-      <label class="check"><input type="checkbox" id="rs-current" checked /> Current week answers</label>
-      <label class="check"><input type="checkbox" id="rs-ideal" checked /> Ideal week answers</label>
-      <label class="check"><input type="checkbox" id="rs-grid" checked /> Week grid</label>
+      <label class="check"><input type="checkbox" id="rs-current" checked /> My week now</label>
+      <label class="check"><input type="checkbox" id="rs-ideal" checked /> My ideal week</label>
+      <label class="check"><input type="checkbox" id="rs-grid" checked /> Schedule</label>
       <div class="dlg-actions">
         <button class="btn" value="example" title="Fill the selected weeks with example answers">Load example</button>
         <button class="btn danger" value="blank">Reset to blank</button>
@@ -184,6 +240,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="people.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
