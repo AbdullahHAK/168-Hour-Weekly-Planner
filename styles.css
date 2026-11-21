@@ -754,3 +754,17 @@ body::before {
   .dots { gap: 2.5px; grid-template-columns: 12px repeat(24, minmax(0, 1fr)); }
   .cell { font-size: 0; padding: 0; }
 }
+
+/* Keep sections in spreadsheet order (row-wise), equal heights per row */
+.sections { display: grid; columns: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 14px; }
+.sections > .section { margin-bottom: 0; display: flex; flex-direction: column; }
+.sections > .section .sec-foot { margin-top: auto; padding-bottom: 6px; }
+@media (max-width: 980px) { .sections { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) {
+  .ticks span:nth-child(even) { display: none; }
+  table.cmp { min-width: 0; font-size: 13.5px; }
+  .cmp th, .cmp td { padding: 8px 4px; }
+  .cmp thead th { font-size: 10.5px; }
+  .mini td:first-child { white-space: nowrap; }
+  .mini { font-size: 12.5px; }
+}
