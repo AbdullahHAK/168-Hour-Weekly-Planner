@@ -576,12 +576,14 @@
     chips.push({ node: b, def });
     let startX = 0;
     let startV = 0;
+    let suppressClick = 0;
     let moved = false;
     let down = false;
     b.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       down = true;
       moved = false;
+      suppressClick = 0; // a fresh press is never part of an earlier drag
       startX = e.clientX;
       startV = getVal(def);
       b.setPointerCapture(e.pointerId);
@@ -617,7 +619,6 @@
         recalc();
       }
     });
-    let suppressClick = 0;
     b.addEventListener('click', (e) => {
       e.preventDefault();
       if (Date.now() - suppressClick < 500) return; // that was a drag, not a tap
